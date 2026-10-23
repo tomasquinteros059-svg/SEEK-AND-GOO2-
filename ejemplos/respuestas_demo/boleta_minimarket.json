@@ -1,0 +1,48 @@
+{
+  "tipo_detectado": "boleta_factura",
+  "legible": true,
+  "motivo_ilegible": null,
+  "documento_tributario": {
+    "tipo": "boleta",
+    "fecha": "2026-10-14",
+    "proveedor": "MINIMARKET LA ESQUINA SPA",
+    "rut_proveedor": "76.543.210-3",
+    "numero_documento": "0045821",
+    "lineas": [
+      {
+        "descripcion": "Pan marraqueta 1 kg",
+        "cantidad": 2,
+        "precio_unitario": 2290,
+        "total": 4580
+      },
+      {
+        "descripcion": "Leche entera 1 L",
+        "cantidad": 3,
+        "precio_unitario": 1190,
+        "total": 3570
+      },
+      {
+        "descripcion": "Huevos docena",
+        "cantidad": 1,
+        "precio_unitario": 3990,
+        "total": 3990
+      },
+      {
+        "descripcion": "Café molido 250 g",
+        "cantidad": 1,
+        "precio_unitario": 4590,
+        "total": 4590
+      }
+    ],
+    "neto": null,
+    "iva": 2671,
+    "total": 16730,
+    "campos_extra": [],
+    "campos_dudosos": [
+      "lineas[3].descripcion"
+    ],
+    "observaciones": "El IVA aparece informado al pie (incluido en el total)."
+  },
+  "lista": null,
+  "formulario": null
+}

@@ -1,0 +1,40 @@
+{
+  "tipo_detectado": "formulario",
+  "legible": true,
+  "motivo_ilegible": null,
+  "documento_tributario": null,
+  "lista": null,
+  "formulario": {
+    "titulo": "FICHA DE INSCRIPCIÓN CLIENTE",
+    "fecha": "2026-10-12",
+    "campos": [
+      {
+        "etiqueta": "Nombre completo",
+        "valor": "María José Soto Pérez"
+      },
+      {
+        "etiqueta": "RUT",
+        "valor": "15.234.876-2"
+      },
+      {
+        "etiqueta": "Teléfono",
+        "valor": "+56 9 8765 4321"
+      },
+      {
+        "etiqueta": "Correo",
+        "valor": "mjsoto@correo.cl"
+      },
+      {
+        "etiqueta": "Dirección",
+        "valor": "Los Aromos 345, Maipú"
+      },
+      {
+        "etiqueta": "¿Desea recibir ofertas por WhatsApp?",
+        "valor": "Sí"
+      }
+    ],
+    "campos_extra": [],
+    "campos_dudosos": [],
+    "observaciones": null
+  }
+}

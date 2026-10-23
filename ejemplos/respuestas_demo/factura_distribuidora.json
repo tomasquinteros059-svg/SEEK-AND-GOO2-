@@ -1,0 +1,46 @@
+{
+  "tipo_detectado": "boleta_factura",
+  "legible": true,
+  "motivo_ilegible": null,
+  "documento_tributario": {
+    "tipo": "factura",
+    "fecha": "2026-10-03",
+    "proveedor": "DISTRIBUIDORA EL TRIGO LTDA.",
+    "rut_proveedor": "77.123.456-9",
+    "numero_documento": "10238",
+    "lineas": [
+      {
+        "descripcion": "Harina 25 kg",
+        "cantidad": 4,
+        "precio_unitario": 18500,
+        "total": 74000
+      },
+      {
+        "descripcion": "Azúcar 25 kg",
+        "cantidad": 2,
+        "precio_unitario": 21900,
+        "total": 43800
+      },
+      {
+        "descripcion": "Levadura 500 g",
+        "cantidad": 10,
+        "precio_unitario": 2350,
+        "total": 23500
+      },
+      {
+        "descripcion": "Mantequilla 5 kg",
+        "cantidad": 3,
+        "precio_unitario": 24800,
+        "total": 74400
+      }
+    ],
+    "neto": 215700,
+    "iva": 40983,
+    "total": 256683,
+    "campos_extra": [],
+    "campos_dudosos": [],
+    "observaciones": null
+  },
+  "lista": null,
+  "formulario": null
+}

@@ -1,0 +1,49 @@
+{
+  "tipo_detectado": "lista",
+  "legible": true,
+  "motivo_ilegible": null,
+  "documento_tributario": null,
+  "lista": {
+    "titulo": "Pedido feria - sábado",
+    "fecha": null,
+    "items": [
+      {
+        "texto": "2 kg tomates",
+        "cantidad": "2 kg",
+        "marcado": false
+      },
+      {
+        "texto": "1 malla papas",
+        "cantidad": "1 malla",
+        "marcado": true
+      },
+      {
+        "texto": "3 paltas",
+        "cantidad": "3",
+        "marcado": false
+      },
+      {
+        "texto": "cilantro",
+        "cantidad": null,
+        "marcado": false
+      },
+      {
+        "texto": "6 limones",
+        "cantidad": "6",
+        "marcado": true
+      },
+      {
+        "texto": "1/2 kg porotos verdes",
+        "cantidad": "1/2 kg",
+        "marcado": false
+      }
+    ],
+    "campos_extra": [],
+    "campos_dudosos": [
+      "fecha",
+      "items[3].cantidad"
+    ],
+    "observaciones": "La lista no tiene fecha escrita; 'sábado' no indica qué día exacto."
+  },
+  "formulario": null
+}
