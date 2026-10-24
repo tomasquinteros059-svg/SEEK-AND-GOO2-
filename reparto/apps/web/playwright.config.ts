@@ -24,6 +24,6 @@ export default defineConfig({
     port: puerto,
     reuseExistingServer: false,
     timeout: 60_000,
-    env: { NEXT_PUBLIC_SUPABASE_URL: url, NEXT_PUBLIC_SUPABASE_ANON_KEY: clave, NEXT_TELEMETRY_DISABLED: "1" },
+    env: { NEXT_PUBLIC_SUPABASE_URL: url, NEXT_PUBLIC_SUPABASE_ANON_KEY: clave, NEXT_TELEMETRY_DISABLED: "1", GEOCODER: "simulado" },
   },
 });

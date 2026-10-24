@@ -52,7 +52,7 @@ export default async function InicioPanel({ searchParams }: Props) {
           <ul className="lista">
             {administradas.map((m) => (
               <li key={m.empresa_id}>
-                <Link href={`/panel/${m.empresa_id}/equipo`}>
+                <Link href={`/panel/${m.empresa_id}/entregas`}>
                   {(m.empresas as unknown as { nombre: string } | null)?.nombre ?? "Empresa"}
                 </Link>
               </li>

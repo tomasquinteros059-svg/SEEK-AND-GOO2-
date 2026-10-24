@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@reparto/dominio", "@reparto/ui-tokens"],
   // Los textos legales viven en reparto/docs/legal y se leen al compilar.
   outputFileTracingIncludes: { "/legal/[documento]": ["../../docs/legal/*.md"] },
+  // Los Excel de entregas pueden pesar hasta 5 MB (el tope de lib/excel.ts), más el sobre del formulario.
+  experimental: { serverActions: { bodySizeLimit: "6mb" } },
 };
 
 // Los mapas de código para Sentry solo se suben si hay credenciales (en la CI de producción).

@@ -439,6 +439,31 @@ as $$
   order by e.hora_comprometida nulls last, r.nombre
 $$;
 
+-- Memoria de direcciones de la empresa (la usa el panel al ubicar).
+create or replace function public.ubicacion_guardada(empresa uuid, clave_direccion text)
+returns table (lat double precision, lng double precision)
+language sql stable security invoker set search_path = ''
+as $$
+  select extensions.st_y(g.punto::extensions.geometry), extensions.st_x(g.punto::extensions.geometry)
+  from public.geocodificaciones g where g.empresa_id = empresa and g.clave = clave_direccion
+$$;
+
+create or replace function public.guardar_ubicacion(empresa uuid, clave_direccion text, direccion text,
+  lat double precision, lng double precision, fuente public.fuente_ubicacion)
+returns void
+language sql security invoker set search_path = ''
+as $$
+  insert into public.geocodificaciones (empresa_id, clave, direccion, punto, fuente)
+  values (empresa, clave_direccion, direccion,
+          extensions.st_setsrid(extensions.st_makepoint(lng, lat), 4326)::extensions.geography, fuente)
+  on conflict (empresa_id, clave) do nothing
+$$;
+
+revoke all on function public.ubicacion_guardada(uuid, text),
+  public.guardar_ubicacion(uuid, text, text, double precision, double precision, public.fuente_ubicacion) from public, anon;
+grant execute on function public.ubicacion_guardada(uuid, text),
+  public.guardar_ubicacion(uuid, text, text, double precision, double precision, public.fuente_ubicacion) to authenticated;
+
 revoke all on function public.crear_entregas_desde_carga(uuid), public.fijar_ubicacion(uuid, double precision, double precision),
   public.entregas_del_dia(uuid, date) from public, anon;
 grant execute on function public.crear_entregas_desde_carga(uuid), public.fijar_ubicacion(uuid, double precision, double precision),

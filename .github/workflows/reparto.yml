@@ -82,7 +82,7 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: "1"
         run: |
-          NEXT_PUBLIC_SUPABASE_URL=$E2E_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY=$E2E_SUPABASE_ANON_KEY npm run build
+          NEXT_PUBLIC_SUPABASE_URL=$E2E_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY=$E2E_SUPABASE_ANON_KEY NEXT_PUBLIC_MAPA_ESTILO=vacio npm run build
           npm run e2e
       - name: App de punta a punta (versión web de Expo)
         working-directory: reparto/apps/movil

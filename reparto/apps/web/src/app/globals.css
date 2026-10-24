@@ -110,3 +110,45 @@ a { color: var(--marca); }
 @media (max-width: 520px) { .documento { grid-template-columns: 1fr; } }
 .legal h1 { margin-bottom: 8px; }
 .legal blockquote { margin: 0; padding: 8px 14px; background: var(--aviso-fondo); border-radius: 10px; }
+
+/* --- Fase 2: entregas, cargas, mapa y sectores --- */
+.ancho { max-width: 1200px; }
+.subbarra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; padding: 8px 16px; background: var(--superficie); border-bottom: 1px solid var(--linea); }
+.nombre-empresa { font-family: var(--fuente-titulo); }
+.pestanas { display: flex; flex-wrap: wrap; gap: 4px; }
+.pestanas a { padding: 12px 14px; min-height: 48px; display: inline-flex; align-items: center; border-radius: 10px; text-decoration: none; color: var(--tinta); font-weight: 700; }
+.pestanas a.activa { background: var(--marca); color: var(--marca-tinta); }
+.titulo-con-acciones { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.selector-dia { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.selector-dia .apagado { align-self: center; }
+.cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+.cifras > div, .cifra-boton { background: var(--superficie); border: 1px solid var(--linea); border-radius: 12px; padding: 12px 16px; display: grid; gap: 2px; text-align: left; font: inherit; color: var(--tinta); }
+.cifras strong { font-size: 1.75rem; }
+.cifra-boton { cursor: pointer; border-left-width: 6px; }
+.cifra-boton.ok { border-left-color: var(--ok); }
+.cifra-boton.pendiente { border-left-color: var(--aviso); }
+.cifra-boton.atraso { border-left-color: var(--atraso); }
+.cifra-boton.activa { outline: 3px solid var(--marca); }
+.chip.neutra { color: var(--tinta); background: var(--hundido); }
+.asignar { display: flex; gap: 6px; flex-wrap: wrap; }
+.asignar select { min-height: 48px; border-radius: 10px; border: 1px solid var(--linea); background: var(--superficie); color: var(--tinta); padding: 0 8px; font: inherit; }
+.motivos { margin: 0; padding-left: 18px; }
+.barra-acciones { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.formulario-grilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; align-items: end; }
+.ancho-completo { grid-column: 1 / -1; }
+details.tarjeta > summary { cursor: pointer; min-height: 32px; list-style-position: inside; }
+.mapa-y-lista { display: grid; grid-template-columns: 1fr 340px; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .mapa-y-lista { grid-template-columns: 1fr; } }
+.mapa { height: 560px; border-radius: 12px; overflow: hidden; border: 1px solid var(--linea); background: var(--hundido); }
+.marcador { width: 18px; height: 18px; border-radius: 50%; border: 3px solid #ffffff; box-shadow: 0 1px 4px rgba(0,0,0,.4); cursor: pointer; }
+.leyenda { display: flex; flex-wrap: wrap; gap: 8px 16px; list-style: none; padding: 0; }
+.punto { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.lista-mapa { max-height: 640px; overflow: auto; }
+.lista-mapa h2 { font-size: 1.1rem; }
+.lista-simple { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.lista-simple li { display: flex; justify-content: space-between; gap: 8px; align-items: center; border-top: 1px solid var(--linea); padding-top: 8px; }
+.formulario-sector { display: grid; gap: 12px; margin-top: 12px; }
+.comunas { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 12px; border: 1px solid var(--linea); border-radius: 10px; padding: 12px; }
+.comunas label { display: flex; gap: 8px; align-items: center; min-height: 32px; }
+.campo input[type="color"] { padding: 4px; width: 64px; }
+.campo input[type="file"] { padding: 10px; }
