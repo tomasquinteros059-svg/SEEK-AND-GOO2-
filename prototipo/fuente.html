@@ -1,0 +1,1500 @@
+<title>Asistente de Negocio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: barra superior fija con pestañas; una columna de trabajo de máx. 1000px; tarjetas solo para documentos en revisión. */
+:root {
+  --paper: #f4f6f9;
+  --surface: #ffffff;
+  --sunken: #eef1f5;
+  --ink: #17202c;
+  --muted: #5a6575;
+  --line: #d9dfe7;
+  --accent: #2445a8;
+  --accent-soft: #e6ebf8;
+  --on-accent: #ffffff;
+  --dudoso: #fff0b3;
+  --dudoso-ink: #664a00;
+  --error: #b42318;
+  --error-bg: #fdecea;
+  --ok: #10704a;
+  --ok-bg: #e4f4ec;
+  --warn: #8a5a00;
+  --warn-bg: #fff6dc;
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10141a; --surface: #171d25; --sunken: #1e2530; --ink: #e6eaf0; --muted: #98a3b2; --line: #2b3440;
+    --accent: #86a2f7; --accent-soft: #1f2a45; --on-accent: #0c1222;
+    --dudoso: #463806; --dudoso-ink: #ffe28a; --error: #ff8f85; --error-bg: #3a1814;
+    --ok: #74d6a8; --ok-bg: #12301f; --warn: #ffd27a; --warn-bg: #33290b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10141a; --surface: #171d25; --sunken: #1e2530; --ink: #e6eaf0; --muted: #98a3b2; --line: #2b3440;
+  --accent: #86a2f7; --accent-soft: #1f2a45; --on-accent: #0c1222;
+  --dudoso: #463806; --dudoso-ink: #ffe28a; --error: #ff8f85; --error-bg: #3a1814;
+  --ok: #74d6a8; --ok-bg: #12301f; --warn: #ffd27a; --warn-bg: #33290b;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.2; }
+h2 { font-size: 1.35rem; font-weight: 700; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+p { margin: 0; }
+.num, .mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 0.85rem; }
+.wrap { max-width: 1000px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+header.app { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 12px 8px; flex-wrap: wrap; }
+.marca { display: flex; align-items: baseline; gap: 10px; }
+.marca h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; }
+.estado { display: flex; gap: 6px; flex-wrap: wrap; }
+.pill { font-size: 0.75rem; padding: 2px 9px; border-radius: 999px; background: var(--sunken); color: var(--muted); white-space: nowrap; }
+.pill.ok { background: var(--ok-bg); color: var(--ok); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+nav.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+nav.tabs button { font: 600 0.95rem var(--f-display); color: var(--muted); background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 12px 9px; cursor: pointer; white-space: nowrap; }
+nav.tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+nav.tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+main { padding-block: 20px 60px; display: grid; gap: 22px; }
+main, section.tab, .bloque, .panel, .doc-datos, .intro { grid-template-columns: minmax(0, 1fr); }
+main > *, section.tab > *, .bloque > *, .panel > * { min-width: 0; }
+.seg { max-width: 100%; }
+section.tab { display: grid; gap: 20px; }
+.intro { display: grid; gap: 6px; max-width: 65ch; }
+.bloque { display: grid; gap: 12px; }
+.fila { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.fila > .crece { flex: 1 1 220px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+
+button.btn, label.btn { font: 600 0.92rem var(--f-body); border-radius: 7px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 8px 14px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; justify-content: center; }
+button.btn.primario, label.btn.primario { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+button.btn.chico { padding: 4px 10px; font-size: 0.82rem; }
+button.btn.texto { border-color: transparent; background: none; color: var(--accent); padding-inline: 6px; }
+button.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+button.btn:focus-visible, label.btn:focus-within, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; flex-wrap: wrap; }
+.seg button { font: 600 0.85rem var(--f-body); background: var(--surface); color: var(--muted); border: 0; border-right: 1px solid var(--line); padding: 7px 12px; cursor: pointer; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+
+input, select, textarea { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100%; min-width: 0; }
+textarea { resize: vertical; }
+input.num { text-align: right; }
+.campo { display: grid; gap: 3px; min-width: 0; }
+.campo > span { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.02em; display: flex; gap: 6px; align-items: center; }
+.dudoso input, input.dudoso, .dudoso textarea { background: var(--dudoso); color: var(--dudoso-ink); border-color: color-mix(in srgb, var(--dudoso-ink) 35%, transparent); }
+.tag-dudoso { font-size: 0.7rem; font-weight: 700; color: var(--dudoso-ink); background: var(--dudoso); padding: 0 6px; border-radius: 4px; }
+.grid-campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+
+.tabla { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th { text-align: left; font: 600 0.78rem var(--f-body); color: var(--muted); letter-spacing: 0.02em; background: var(--sunken); padding: 7px 8px; white-space: nowrap; }
+td { border-top: 1px solid var(--line); padding: 4px 6px; vertical-align: middle; }
+td input, td select { border-color: transparent; background: transparent; padding: 5px 6px; }
+td input:hover { border-color: var(--line); }
+td.dudoso input { background: var(--dudoso); color: var(--dudoso-ink); }
+td.acc { width: 1%; white-space: nowrap; }
+td.n, th.n { text-align: right; }
+.vacio { padding: 18px; text-align: center; color: var(--muted); }
+
+.avisos { display: grid; gap: 6px; }
+.aviso { padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; display: flex; gap: 8px; align-items: flex-start; }
+.aviso.error { background: var(--error-bg); color: var(--error); }
+.aviso.advertencia { background: var(--warn-bg); color: var(--warn); }
+.aviso.ok { background: var(--ok-bg); color: var(--ok); }
+.aviso.info { background: var(--accent-soft); color: var(--ink); }
+.aviso b { font-weight: 700; }
+
+.subida { border: 2px dashed var(--line); border-radius: var(--r); padding: 22px 16px; text-align: center; display: grid; gap: 10px; justify-items: center; background: var(--surface); }
+.subida.encima { border-color: var(--accent); background: var(--accent-soft); }
+
+.doc { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); display: grid; overflow: hidden; }
+.doc-cab { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 12px 16px; border-bottom: 1px dashed var(--line); flex-wrap: wrap;
+  background: radial-gradient(circle at 6px 0, var(--paper) 4px, transparent 4.5px) 0 0 / 14px 8px repeat-x, var(--surface); padding-top: 16px; }
+.doc-cuerpo { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 18px; padding: 16px; }
+.doc-cuerpo > * { min-width: 0; }
+.doc-foto img, .doc-foto canvas { width: 100%; border-radius: 6px; border: 1px solid var(--line); display: block; }
+.doc-datos { display: grid; gap: 14px; }
+.doc-pie { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; padding: 12px 16px; border-top: 1px solid var(--line); background: var(--sunken); align-items: center; }
+.doc-pie .izq { margin-right: auto; }
+@media (max-width: 680px) { .doc-cuerpo { grid-template-columns: 1fr; } .doc-foto { max-width: 260px; } .doc-foto img { max-height: 200px; object-fit: contain; background: var(--sunken); } .tabla table { min-width: 460px; } }
+
+.cargando { display: flex; gap: 10px; align-items: center; color: var(--muted); }
+.spin { width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: gira 0.8s linear infinite; flex: none; }
+@keyframes gira { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 3s; } }
+
+.banner-ejemplo { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px 14px; border-radius: var(--r); background: var(--accent-soft); font-size: 0.9rem; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font-size: 0.82rem; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; }
+.chip.filtro { background: var(--accent-soft); border-color: transparent; cursor: default; }
+.msj { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+.msj-cab { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.msj textarea { min-height: 90px; }
+.contador { font-size: 0.78rem; }
+.contador.excede { color: var(--error); font-weight: 700; }
+details > summary { cursor: pointer; font-weight: 600; }
+.nota-item { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 9px 16px; border-radius: 8px; font-size: 0.9rem; z-index: 20; max-width: calc(100% - 32px); }
+.dos-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+</style>
+
+<header class="app">
+  <div class="wrap">
+    <div class="bar">
+      <div class="marca"><h1>Asistente de Negocio</h1><span class="muted small">prototipo</span></div>
+      <div class="estado"><span class="pill" id="estado-ia">IA: revisando…</span><span class="pill" id="estado-datos">Datos: cargando…</span></div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Secciones">
+      <button role="tab" id="tab-escanear" aria-selected="true" data-tab="escanear">Escanear</button>
+      <button role="tab" id="tab-excel" aria-selected="false" data-tab="excel">Excel</button>
+      <button role="tab" id="tab-conocimiento" aria-selected="false" data-tab="conocimiento">Conocimiento</button>
+      <button role="tab" id="tab-mensajes" aria-selected="false" data-tab="mensajes">Mensajes</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="banner"></div>
+
+  <!-- ===================== ESCANEAR ===================== -->
+  <section class="tab" id="escanear" role="tabpanel" aria-labelledby="tab-escanear">
+    <div class="intro">
+      <h2>Escanear documentos</h2>
+      <p class="muted">Sube fotos de boletas, facturas, listas o formularios (también PDF). Revisa los datos antes de guardar: lo que la IA no pudo leer con seguridad queda en <span class="tag-dudoso">amarillo</span>.</p>
+    </div>
+    <div class="subida" id="zona-subida">
+      <p><b>Arrastra fotos aquí</b> o elige archivos</p>
+      <div class="fila" style="justify-content:center">
+        <label class="btn primario" for="archivos-escaneo">Elegir fotos o PDF</label>
+        <input type="file" id="archivos-escaneo" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.heic" multiple hidden>
+        <button class="btn" data-action="probar-ejemplos">Probar con fotos de ejemplo</button>
+      </div>
+      <div class="fila" style="justify-content:center">
+        <span class="small muted">Tipo:</span>
+        <div class="seg" id="tipo-escaneo" role="group" aria-label="Tipo de documento">
+          <button data-tipo="automatico" aria-pressed="true">Automático</button>
+          <button data-tipo="boleta_factura" aria-pressed="false">Boleta / Factura</button>
+          <button data-tipo="lista" aria-pressed="false">Lista</button>
+          <button data-tipo="formulario" aria-pressed="false">Formulario</button>
+        </div>
+      </div>
+      <p class="small muted">JPG, PNG o PDF. En iPhone las fotos HEIC se convierten solas al subirlas desde la galería.</p>
+    </div>
+    <div id="pendientes" class="bloque"></div>
+    <div class="bloque">
+      <div class="fila" style="justify-content:space-between"><h3>Documentos guardados</h3><button class="btn texto" data-tab-ir="excel">Ver en Excel →</button></div>
+      <div id="guardados-resumen"></div>
+    </div>
+  </section>
+
+  <!-- ===================== EXCEL ===================== -->
+  <section class="tab" id="excel" role="tabpanel" aria-labelledby="tab-excel" hidden>
+    <div class="intro">
+      <h2>Excel</h2>
+      <p class="muted">Una hoja por tipo de documento, más una hoja «Resumen» con totales por mes y por proveedor. Montos en pesos con punto de miles y fechas dd-mm-aaaa.</p>
+    </div>
+    <div class="panel">
+      <div class="fila">
+        <button class="btn primario" data-action="excel-nuevo">Descargar Excel nuevo</button>
+        <label class="btn" for="excel-existente">Agregar a un Excel existente…</label>
+        <input type="file" id="excel-existente" accept=".xlsx" hidden>
+      </div>
+      <div id="excel-estado" class="avisos"></div>
+    </div>
+    <div class="bloque">
+      <div class="fila" style="justify-content:space-between">
+        <h3>Columnas</h3>
+        <div class="seg" id="tipo-columnas" role="group" aria-label="Tipo de documento para columnas">
+          <button data-tipo="boleta_factura" aria-pressed="true">Boletas y Facturas</button>
+          <button data-tipo="lista" aria-pressed="false">Listas</button>
+          <button data-tipo="formulario" aria-pressed="false">Formularios</button>
+        </div>
+      </div>
+      <p class="small muted">Renombra, oculta o agrega columnas. La IA llenará las columnas nuevas en los próximos escaneos.</p>
+      <div id="editor-columnas"></div>
+      <div class="panel">
+        <h3>Agregar columna</h3>
+        <div class="fila">
+          <label class="campo crece"><span>Nombre</span><input id="col-nombre" placeholder="Ej: Forma de pago"></label>
+          <label class="campo crece"><span>Qué debe buscar la IA (opcional)</span><input id="col-desc" placeholder="Ej: efectivo, débito o crédito"></label>
+          <button class="btn" data-action="col-agregar" style="align-self:end">Agregar</button>
+        </div>
+      </div>
+    </div>
+    <div class="bloque">
+      <h3>Documentos guardados</h3>
+      <div id="tabla-documentos"></div>
+    </div>
+  </section>
+
+  <!-- ===================== CONOCIMIENTO ===================== -->
+  <section class="tab" id="conocimiento" role="tabpanel" aria-labelledby="tab-conocimiento" hidden>
+    <div class="intro">
+      <h2>Base de conocimiento</h2>
+      <p class="muted">Lo que le cuentes al asistente sobre tu negocio. Lo usa para reconocer proveedores al escanear y para escribir los mensajes.</p>
+    </div>
+    <div class="seg" id="sub-conocimiento" role="group" aria-label="Sección de conocimiento">
+      <button data-sub="contactos" aria-pressed="true">Clientes y contactos</button>
+      <button data-sub="notas" aria-pressed="false">Notas</button>
+      <button data-sub="archivos" aria-pressed="false">Documentos</button>
+    </div>
+    <div id="k-contactos" class="bloque">
+      <div class="panel">
+        <div class="fila">
+          <label class="btn primario" for="archivo-contactos">Importar desde Excel o CSV</label>
+          <input type="file" id="archivo-contactos" accept=".xlsx,.csv,.txt" hidden>
+          <button class="btn" data-action="contacto-agregar">Agregar a mano</button>
+        </div>
+        <div id="mapeo-contactos"></div>
+      </div>
+      <div id="tabla-contactos"></div>
+    </div>
+    <div id="k-notas" class="bloque" hidden>
+      <div class="panel">
+        <label class="campo"><span>Nueva nota</span><textarea id="nota-nueva" rows="3" placeholder="Ej: El cliente Juan Pérez paga siempre los días 5."></textarea></label>
+        <div class="fila"><button class="btn primario" data-action="nota-agregar">Guardar nota</button></div>
+      </div>
+      <div id="lista-notas" class="bloque"></div>
+    </div>
+    <div id="k-archivos" class="bloque" hidden>
+      <div class="panel">
+        <div class="fila">
+          <label class="btn primario" for="archivo-conocimiento">Subir PDF, Word, Excel o TXT</label>
+          <input type="file" id="archivo-conocimiento" accept=".pdf,.docx,.xlsx,.txt,.md,.csv" multiple hidden>
+        </div>
+        <p class="small muted">Se lee el texto aquí mismo en tu navegador. Ejemplos: lista de precios, condiciones de pago, horarios.</p>
+        <div id="archivos-estado" class="avisos"></div>
+      </div>
+      <div id="lista-archivos" class="bloque"></div>
+    </div>
+  </section>
+
+  <!-- ===================== MENSAJES ===================== -->
+  <section class="tab" id="mensajes" role="tabpanel" aria-labelledby="tab-mensajes" hidden>
+    <div class="intro">
+      <h2>Crear mensajes</h2>
+      <p class="muted">Escribe lo que quieres decir y a quién. El asistente busca a los destinatarios en tus contactos y escribe un mensaje para cada uno. No se envía nada: revisas, editas y copias.</p>
+    </div>
+    <div class="panel">
+      <label class="campo"><span>Instrucción</span><textarea id="instruccion" rows="3">Escríbeles a los clientes que deben más de $50.000 que el pago vence el viernes</textarea></label>
+      <div class="chips" id="ejemplos-instruccion">
+        <button class="chip" data-ej="Recuérdale a Juan Pérez que su pago vence el día 5 y agradécele por ser cliente frecuente">Recordatorio a una persona</button>
+        <button class="chip" data-ej="Avisa a todos los clientes que el lunes cerramos por inventario">Aviso a todos</button>
+        <button class="chip" data-ej="Escríbeles a los clientes con deuda vencida que se pongan al día">Deudas vencidas</button>
+      </div>
+      <div class="fila">
+        <div class="campo"><span>Canal</span>
+          <div class="seg" id="canal" role="group" aria-label="Canal">
+            <button data-v="whatsapp" aria-pressed="true">WhatsApp</button>
+            <button data-v="correo" aria-pressed="false">Correo</button>
+            <button data-v="sms" aria-pressed="false">SMS</button>
+          </div>
+        </div>
+        <div class="campo"><span>Tono</span>
+          <div class="seg" id="tono" role="group" aria-label="Tono">
+            <button data-v="formal" aria-pressed="false">Formal</button>
+            <button data-v="cercano" aria-pressed="true">Cercano</button>
+            <button data-v="breve" aria-pressed="false">Breve</button>
+          </div>
+        </div>
+      </div>
+      <div class="fila"><button class="btn primario" data-action="generar">Generar mensajes</button></div>
+    </div>
+    <div id="resultado-mensajes" class="bloque"></div>
+    <details class="panel" id="historial">
+      <summary>Historial de mensajes generados</summary>
+      <div id="lista-historial" class="bloque"></div>
+    </details>
+  </section>
+</main>
+<div id="toast" class="toast" hidden role="status"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   Utilidades
+   ============================================================ */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const nuevoId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const miles = (n) => String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+const pesos = (n) => (n === null || n === undefined || n === "" || Number.isNaN(Number(n))) ? "" : (n < 0 ? "-$" : "$") + miles(Number(n));
+const IVA = 0.19, DOLAR = 950;
+const PRECIO_ENTRADA = 4, PRECIO_SALIDA = 20; // US$ por millón de tokens (Claude Opus 5.5)
+
+function parseMonto(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number") return Number.isFinite(v) ? Math.round(v) : null;
+  let t = String(v).replace(/\$/g, "").replace(/\s/g, "");
+  if (!t) return null;
+  if (/^-?\d+[.,]\d{1,2}$/.test(t)) return Math.round(parseFloat(t.replace(",", ".")));
+  t = t.replace(/[.,]/g, "");
+  return /^-?\d+$/.test(t) ? parseInt(t, 10) : null;
+}
+function parseNum(v) {
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  const n = parseFloat(String(v).replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+function parseFecha(t) {
+  if (!t) return null;
+  if (t instanceof Date) return isNaN(t) ? null : new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  const s = String(t).trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return fechaValida(+m[1], +m[2], +m[3]);
+  m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+  if (m) { let y = +m[3]; if (y < 100) y += 2000; return fechaValida(y, +m[2], +m[1]); }
+  return null;
+}
+function fechaValida(y, mo, d) { const f = new Date(y, mo - 1, d); return (f.getFullYear() === y && f.getMonth() === mo - 1 && f.getDate() === d) ? f : null; }
+const isoFecha = (f) => f ? `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}` : null;
+const verFecha = (iso) => { const f = parseFecha(iso); return f ? `${String(f.getDate()).padStart(2, "0")}-${String(f.getMonth() + 1).padStart(2, "0")}-${f.getFullYear()}` : (iso || ""); };
+const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const hoy = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); };
+
+function limpiarRut(r) { return String(r || "").replace(/[^0-9kK]/g, "").toUpperCase(); }
+function rutValido(r) {
+  const l = limpiarRut(r); if (l.length < 2) return false;
+  const cuerpo = l.slice(0, -1), dv = l.slice(-1); if (!/^\d+$/.test(cuerpo)) return false;
+  let suma = 0, f = 2;
+  for (let i = cuerpo.length - 1; i >= 0; i--) { suma += +cuerpo[i] * f; f = f === 7 ? 2 : f + 1; }
+  const res = 11 - (suma % 11); const esp = res === 11 ? "0" : res === 10 ? "K" : String(res);
+  return dv === esp;
+}
+function formatRut(r) { const l = limpiarRut(r); if (l.length < 2 || !/^\d+$/.test(l.slice(0, -1))) return r; return miles(+l.slice(0, -1)) + "-" + l.slice(-1); }
+const normTexto = (t) => String(t || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\b(ltda|spa|s\.?a\.?|eirl|limitada)\b/g, "").replace(/[^a-z0-9]/g, "");
+const normNumero = (n) => String(n || "").replace(/[^0-9a-zA-Z]/g, "").replace(/^0+/, "").toUpperCase();
+function normTelefono(t) {
+  if (t === null || t === undefined) return "";
+  const d = String(t).replace(/\D/g, "");
+  if (!d) return "";
+  if (d.length === 9 && d[0] === "9") return `+56 9 ${d.slice(1, 5)} ${d.slice(5)}`;
+  if (d.length === 8) return `+56 9 ${d.slice(0, 4)} ${d.slice(4)}`;
+  if (d.length === 11 && d.startsWith("569")) return `+56 9 ${d.slice(3, 7)} ${d.slice(7)}`;
+  return String(t).trim();
+}
+const correoValido = (c) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(c || "").trim());
+
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), 2800); }
+async function copiar(texto, el) {
+  try { await navigator.clipboard.writeText(texto); toast("Copiado"); }
+  catch { if (el) { el.focus(); el.select?.(); } toast("Selecciona el texto y cópialo con el menú del teléfono"); }
+}
+function costoEstimado(caracteresEntrada, imagenes, caracteresSalida) {
+  const tokEntrada = caracteresEntrada / 3.5 + imagenes * 1600;
+  const tokSalida = caracteresSalida / 3.5 + 700; // incluye razonamiento aproximado
+  const usd = (tokEntrada * PRECIO_ENTRADA + tokSalida * PRECIO_SALIDA) / 1e6;
+  return { usd, texto: `US$ ${usd.toFixed(3).replace(".", ",")} ≈ $${miles(usd * DOLAR)} CLP` };
+}
+function cargarScript(src) {
+  cargarScript.c = cargarScript.c || {};
+  if (!cargarScript.c[src]) cargarScript.c[src] = new Promise((ok, mal) => {
+    const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => mal(new Error("No se pudo cargar " + src)); document.head.append(s);
+  });
+  return cargarScript.c[src];
+}
+const LIB = {
+  excel: "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js",
+  word: "https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js",
+  pdfWorker: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js",
+  pdf: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",
+};
+async function cargarPdf() {
+  await cargarScript(LIB.pdfWorker); await cargarScript(LIB.pdf);
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = LIB.pdfWorker;
+  return window.pdfjsLib;
+}
+
+/* ============================================================
+   Estado y guardado
+   ============================================================ */
+const COLUMNAS_BASE = {
+  boleta_factura: [["fecha", "Fecha"], ["tipo", "Tipo"], ["proveedor", "Proveedor"], ["rut_proveedor", "RUT"], ["numero_documento", "N° documento"], ["neto", "Neto"], ["iva", "IVA"], ["total", "Total"]],
+  lista: [["fecha", "Fecha"], ["titulo", "Título"], ["texto", "Ítem"], ["cantidad", "Cantidad"], ["marcado", "Marcado"]],
+  formulario: [["fecha", "Fecha"], ["titulo", "Título"]],
+};
+const NOMBRE_HOJA = { boleta_factura: "Boletas y Facturas", lista: "Listas", formulario: "Formularios" };
+function columnasIniciales() {
+  const c = {};
+  for (const [tipo, cols] of Object.entries(COLUMNAS_BASE)) c[tipo] = cols.map(([clave, nombre]) => ({ clave, nombre, desc: "", activa: true, base: true }));
+  return c;
+}
+function datosEjemplo() {
+  const f = (offset) => { const d = hoy(); d.setDate(d.getDate() + offset); return isoFecha(d); };
+  return {
+    ejemplo: true,
+    documentos: [
+      { id: nuevoId(), tipo: "factura", fecha: "2026-09-12", proveedor: "DISTRIBUIDORA EL TRIGO LTDA.", rut_proveedor: "77.123.456-9", numero_documento: "10102",
+        lineas: [{ descripcion: "Harina 25 kg", cantidad: 6, precio_unitario: 18500, total: 111000 }, { descripcion: "Levadura 500 g", cantidad: 8, precio_unitario: 2350, total: 18800 }],
+        neto: 129800, iva: 24662, total: 154462, extras: {}, archivo: "ejemplo", ejemplo: true },
+      { id: nuevoId(), tipo: "boleta", fecha: "2026-10-14", proveedor: "MINIMARKET LA ESQUINA SPA", rut_proveedor: "76.543.210-3", numero_documento: "0045790",
+        lineas: [{ descripcion: "Pan marraqueta 1 kg", cantidad: 2, precio_unitario: 2290, total: 4580 }, { descripcion: "Leche entera 1 L", cantidad: 3, precio_unitario: 1190, total: 3570 }],
+        neto: null, iva: 1301, total: 8150, extras: {}, archivo: "ejemplo", ejemplo: true },
+      { id: nuevoId(), tipo: "factura", fecha: "2026-10-03", proveedor: "DISTRIBUIDORA EL TRIGO LTDA.", rut_proveedor: "77.123.456-9", numero_documento: "10195",
+        lineas: [{ descripcion: "Azúcar 25 kg", cantidad: 2, precio_unitario: 21900, total: 43800 }],
+        neto: 43800, iva: 8322, total: 52122, extras: {}, archivo: "ejemplo", ejemplo: true },
+    ],
+    notas: [
+      { id: nuevoId(), texto: "El cliente Juan Pérez paga siempre los días 5.", ejemplo: true },
+      { id: nuevoId(), texto: "Somos Panadería Doña Rosa. Atendemos de lunes a sábado de 7:00 a 20:00. Transferencias a la cuenta corriente Banco Estado 12345678.", ejemplo: true },
+    ],
+    archivos: [],
+    contactos: [
+      { id: nuevoId(), nombre: "Juan Pérez", telefono: "+56 9 8123 4567", correo: "juan.perez@correo.cl", deuda: 72500, vence: f(-3), extra: {}, ejemplo: true },
+      { id: nuevoId(), nombre: "María José Soto", telefono: "+56 9 8765 4321", correo: "mjsoto@correo.cl", deuda: 18900, vence: f(6), extra: {}, ejemplo: true },
+      { id: nuevoId(), nombre: "Almacén Don Lucho", telefono: "", correo: "donlucho@almacen.cl", deuda: 134000, vence: f(-10), extra: {}, ejemplo: true },
+      { id: nuevoId(), nombre: "Carolina Muñoz", telefono: "+56 9 7654 1122", correo: "", deuda: 56300, vence: f(2), extra: {}, ejemplo: true },
+      { id: nuevoId(), nombre: "Pedro Rojas", telefono: "+56 9 9988 7766", correo: "projas@correo.cl", deuda: 0, vence: null, extra: {}, ejemplo: true },
+      { id: nuevoId(), nombre: "Cafetería El Andén", telefono: "+56 9 6543 2109", correo: "contacto@elanden.cl", deuda: 98000, vence: f(4), extra: {}, ejemplo: true },
+    ],
+    columnas: columnasIniciales(),
+    lotes: [],
+  };
+}
+const CLAVES = ["documentos", "notas", "archivos", "contactos", "columnas", "lotes"];
+let S = datosEjemplo();
+const UI = { tab: "escanear", tipoEscaneo: "automatico", tipoCol: "boleta_factura", sub: "contactos", canal: "whatsapp", tono: "cercano", pendientes: [], mapeo: null, resultado: null };
+
+const Store = {
+  modo: "local", db: null, uid: null, colas: {},
+  async iniciar() {
+    let db = null, user = null;
+    try {
+      if (window.claude?.use) { [db, user] = await Promise.all([claude.use("db"), claude.use("user")]); }
+    } catch { db = null; }
+    if (db && user) {
+      try {
+        this.uid = await user.id();
+        if (this.uid) {
+          this.db = db; this.modo = "db";
+          const docs = await Promise.all(CLAVES.map((k) => db.doc(`data/users/${this.uid}/${k}`).get()));
+          const cargado = {}; let hay = false;
+          docs.forEach((d, i) => { if (d.exists) { cargado[CLAVES[i]] = d.data().v; hay = true; } });
+          if (hay) aplicarCargado(cargado);
+          return;
+        }
+      } catch { this.db = null; this.modo = "local"; }
+    }
+    this.modo = "local";
+    try { const raw = localStorage.getItem("asistente-negocio-v1"); if (raw) aplicarCargado(JSON.parse(raw)); } catch { this.modo = "memoria"; }
+  },
+  guardar(...claves) {
+    if (S.ejemplo) { S.ejemplo = false; claves = CLAVES; }
+    if (this.modo === "db") {
+      for (const k of claves) {
+        clearTimeout(this.colas[k]?.t);
+        this.colas[k] = this.colas[k] || { p: Promise.resolve() };
+        this.colas[k].t = setTimeout(() => {
+          const cuerpo = { v: JSON.parse(JSON.stringify(S[k])), ejemplo: false };
+          this.colas[k].p = this.colas[k].p.then(() => this.db.doc(`data/users/${this.uid}/${k}`).set(cuerpo)).catch((e) => {
+            if (e?.code === "quota_exceeded") toast("No queda espacio para guardar. Borra documentos antiguos.");
+            else toast("No se pudo guardar el último cambio.");
+          });
+        }, 400);
+      }
+    } else if (this.modo === "local") {
+      clearTimeout(this._t);
+      this._t = setTimeout(() => { try { localStorage.setItem("asistente-negocio-v1", JSON.stringify(Object.fromEntries(CLAVES.map((k) => [k, S[k]])))); } catch { /* sin almacenamiento */ } }, 300);
+    }
+    pintarBanner();
+  },
+};
+function aplicarCargado(c) {
+  const base = { ejemplo: false, documentos: [], notas: [], archivos: [], contactos: [], columnas: columnasIniciales(), lotes: [] };
+  for (const k of CLAVES) if (c[k] !== undefined) base[k] = c[k];
+  S = base;
+}
+
+/* ============================================================
+   IA (Claude desde la cuenta del usuario)
+   ============================================================ */
+const IA = { sample: null, imagenes: false, maxImgs: 1, listo: null };
+IA.listo = (async () => {
+  try {
+    if (!window.claude?.use) return;
+    IA.sample = await claude.use("sample");
+    if (IA.sample) { const lim = await IA.sample.limits().catch(() => null); IA.imagenes = !!lim?.images; IA.maxImgs = lim?.images?.maxCount || 1; }
+  } catch { IA.sample = null; }
+})();
+const ERRORES_IA = {
+  not_granted: "No diste permiso para usar Claude en esta página. Puedes activarlo en el menú de permisos de la página.",
+  sampling_disabled: "Claude no está disponible para tu cuenta en este momento.",
+  rate_limited: "Llegaste al límite de uso de tu plan de Claude. Espera unos minutos e intenta de nuevo.",
+  session_expired: "Tu sesión expiró. Vuelve a iniciar sesión en Claude.",
+  image_rejected: "La imagen no se pudo leer (muy grande, dañada o formato no soportado). Prueba con otra foto.",
+  images_unavailable: "En esta vista no se pueden enviar fotos a Claude. Ábrela en claude.ai.",
+  refused: "Claude no quiso procesar este contenido.",
+  invalid_json: "La respuesta de la IA no vino en el formato esperado. Intenta de nuevo.",
+  empty_completion: "La IA no devolvió respuesta. Intenta de nuevo.",
+  prompt_too_large: "Hay demasiada información para enviarla de una vez. Borra notas o documentos largos.",
+  upstream_error: "Se cortó la conexión con la IA. Revisa tu internet e intenta de nuevo.",
+};
+const errorIA = (e) => ERRORES_IA[e?.code] || (e?.code === "cancelled" ? "Cancelado." : "No se pudo hablar con la IA. Intenta de nuevo.");
+const estadoIA = () => IA.sample ? (IA.imagenes ? "ok" : "texto") : "no";
+
+function contextoNegocio(maxChars = 12000) {
+  const partes = [];
+  const notas = S.notas.map((n) => "- " + n.texto).join("\n");
+  if (notas) partes.push("Notas del dueño:\n" + notas);
+  for (const a of S.archivos) partes.push(`Documento «${a.nombre}»:\n${a.texto.slice(0, 4000)}`);
+  let t = partes.join("\n\n");
+  if (t.length > maxChars) t = t.slice(0, maxChars) + "\n[…]";
+  return t;
+}
+function proveedoresConocidos() {
+  const vistos = new Map();
+  for (const d of S.documentos) if (d.proveedor && (d.tipo === "boleta" || d.tipo === "factura")) vistos.set(normTexto(d.proveedor) + limpiarRut(d.rut_proveedor), `${d.proveedor}${d.rut_proveedor ? " (RUT " + d.rut_proveedor + ")" : ""}`);
+  return [...vistos.values()].slice(0, 100);
+}
+
+/* ============================================================
+   ESCANEO
+   ============================================================ */
+const REGLAS_ESCANEO = `Eres un asistente que digitaliza documentos de un pequeño negocio en Chile.
+Recibes la foto (o páginas) de una boleta, factura, lista escrita a mano o formulario y devuelves sus datos.
+
+Reglas obligatorias:
+1. NUNCA inventes ni supongas datos. Si un campo no se ve, está cortado o no se entiende, ponlo en null y agrega su ruta a "campos_dudosos" (ej. "fecha", "lineas[2].cantidad", "items[0].texto", "campos[1].valor", "extras.forma_pago").
+2. Si lees un valor pero no estás seguro (letra difícil, borroso), escríbelo igual y agrega su ruta a "campos_dudosos".
+3. Montos en pesos chilenos como números enteros, sin puntos ni signo $ ("$12.990" → 12990).
+4. Fechas en formato aaaa-mm-dd. Los documentos chilenos usan día/mes/año.
+5. RUT tal como aparece, con guion y dígito verificador.
+6. Copia los textos tal como están escritos.
+7. Si la foto está tan borrosa, oscura o cortada que no se puede leer, pon "legible": false y explica en "motivo_ilegible" (en español) cómo tomarla mejor. No adivines.
+8. Llena solo el bloque del tipo de documento y deja los otros en null.
+9. Boletas: normalmente solo traen total (IVA incluido); deja neto e iva en null si no aparecen. Facturas: neto, IVA (19%) y total. No calcules valores que no estén escritos.
+10. En "observaciones" anota en español lo que el usuario deba revisar.`;
+
+const FORMATO_ESCANEO = `Responde SOLO con un objeto JSON con esta forma exacta:
+{"tipo_detectado": "boleta_factura" | "lista" | "formulario" | "otro",
+ "legible": true | false,
+ "motivo_ilegible": string | null,
+ "documento_tributario": null | {"tipo": "boleta" | "factura", "fecha": string|null, "proveedor": string|null, "rut_proveedor": string|null, "numero_documento": string|null,
+     "lineas": [{"descripcion": string|null, "cantidad": number|null, "precio_unitario": number|null, "total": number|null}],
+     "neto": number|null, "iva": number|null, "total": number|null, "extras": {"<clave>": string|null}, "campos_dudosos": [string], "observaciones": string|null},
+ "lista": null | {"titulo": string|null, "fecha": string|null, "items": [{"texto": string|null, "cantidad": string|null, "marcado": boolean|null}], "extras": {}, "campos_dudosos": [string], "observaciones": string|null},
+ "formulario": null | {"titulo": string|null, "fecha": string|null, "campos": [{"etiqueta": string, "valor": string|null}], "extras": {}, "campos_dudosos": [string], "observaciones": string|null}}`;
+
+function promptEscaneo(tipo, paginas) {
+  const partes = [REGLAS_ESCANEO];
+  const extras = [];
+  for (const [t, cols] of Object.entries(S.columnas)) for (const c of cols) if (!c.base && c.activa) extras.push(`- [${NOMBRE_HOJA[t]}] clave "${c.clave}": ${c.nombre}${c.desc ? " — " + c.desc : ""}`);
+  if (extras.length) partes.push(`Columnas extra pedidas por el usuario. Inclúyelas en "extras" con la clave exacta (null si no aparecen):\n${extras.join("\n")}`);
+  const provs = proveedoresConocidos();
+  if (provs.length) partes.push(`Proveedores ya conocidos. Úsalos SOLO para escribir el nombre igual que antes si el RUT o el nombre visible coinciden claramente:\n${provs.map((p) => "- " + p).join("\n")}`);
+  const ctx = contextoNegocio(4000);
+  if (ctx) partes.push("Información del negocio:\n" + ctx);
+  partes.push(tipo === "automatico" ? "Identifica qué tipo de documento es y extrae sus datos." : `El usuario indica que este documento es: ${{ boleta_factura: "boleta o factura", lista: "una lista", formulario: "un formulario" }[tipo]}. Extrae sus datos.`);
+  if (paginas > 1) partes.push(`Las ${paginas} imágenes son páginas del mismo documento, en orden.`);
+  partes.push(FORMATO_ESCANEO);
+  return partes.join("\n\n");
+}
+
+function normalizarResultado(r) {
+  r = (r && typeof r === "object") ? r : {};
+  const out = { tipo_detectado: ["boleta_factura", "lista", "formulario", "otro"].includes(r.tipo_detectado) ? r.tipo_detectado : "otro",
+    legible: r.legible !== false, motivo_ilegible: r.motivo_ilegible || null };
+  const dud = (x) => Array.isArray(x?.campos_dudosos) ? x.campos_dudosos.map(String) : [];
+  const extras = (x) => { const e = {}; if (x?.extras && typeof x.extras === "object") for (const [k, v] of Object.entries(x.extras)) e[k] = v == null ? null : String(v); return e; };
+  const fecha = (v) => { const f = parseFecha(v); return f ? isoFecha(f) : (v ? String(v) : null); };
+  const txt = (v) => (v === null || v === undefined || v === "") ? null : String(v);
+  if (out.tipo_detectado === "boleta_factura" && r.documento_tributario) {
+    const d = r.documento_tributario;
+    out.dt = { tipo: d.tipo === "factura" ? "factura" : "boleta", fecha: fecha(d.fecha), proveedor: txt(d.proveedor), rut_proveedor: txt(d.rut_proveedor), numero_documento: txt(d.numero_documento),
+      lineas: (Array.isArray(d.lineas) ? d.lineas : []).map((l) => ({ descripcion: txt(l?.descripcion), cantidad: parseNum(l?.cantidad), precio_unitario: parseMonto(l?.precio_unitario), total: parseMonto(l?.total) })),
+      neto: parseMonto(d.neto), iva: parseMonto(d.iva), total: parseMonto(d.total), extras: extras(d), dudosos: dud(d), obs: txt(d.observaciones) };
+  } else if (out.tipo_detectado === "lista" && r.lista) {
+    const l = r.lista;
+    out.li = { titulo: txt(l.titulo), fecha: fecha(l.fecha), items: (Array.isArray(l.items) ? l.items : []).map((i) => ({ texto: txt(i?.texto), cantidad: txt(i?.cantidad), marcado: !!i?.marcado })),
+      extras: extras(l), dudosos: dud(l), obs: txt(l.observaciones) };
+  } else if (out.tipo_detectado === "formulario" && r.formulario) {
+    const f = r.formulario;
+    out.fo = { titulo: txt(f.titulo), fecha: fecha(f.fecha), campos: (Array.isArray(f.campos) ? f.campos : []).map((c) => ({ etiqueta: String(c?.etiqueta ?? ""), valor: txt(c?.valor) })),
+      extras: extras(f), dudosos: dud(f), obs: txt(f.observaciones) };
+  }
+  return out;
+}
+
+function validarTributario(d) {
+  const av = [];
+  d.lineas.forEach((l, i) => {
+    if (l.cantidad != null && l.precio_unitario != null && l.total != null) {
+      const calc = l.cantidad * l.precio_unitario;
+      if (Math.abs(calc - l.total) > 2) av.push({ nivel: "advertencia", campo: `lineas[${i}].total`, msg: `Línea ${i + 1}: ${l.cantidad} × ${pesos(l.precio_unitario)} = ${pesos(calc)}, pero dice ${pesos(l.total)}.` });
+    }
+  });
+  const totales = d.lineas.map((l) => l.total).filter((t) => t != null);
+  if (totales.length && totales.length === d.lineas.length && (d.neto != null || d.total != null)) {
+    const suma = totales.reduce((a, b) => a + b, 0);
+    const cuadraNeto = d.neto != null && Math.abs(suma - d.neto) <= 2;
+    const cuadraTotal = d.total != null && Math.abs(suma - d.total) <= 2;
+    if (!cuadraNeto && !cuadraTotal) { const ref = d.neto != null ? "neto" : "total"; av.push({ nivel: "error", campo: ref, msg: `La suma de las líneas (${pesos(suma)}) no cuadra con el ${ref} (${pesos(d[ref])}).` }); }
+  }
+  if (d.neto != null && d.iva != null && d.total != null && Math.abs(d.neto + d.iva - d.total) > 2)
+    av.push({ nivel: "error", campo: "total", msg: `Neto + IVA = ${pesos(d.neto + d.iva)}, pero el total dice ${pesos(d.total)}.` });
+  if (d.neto != null && d.iva != null && d.iva > 0) { const esp = Math.round(d.neto * IVA); if (Math.abs(esp - d.iva) > Math.max(2, d.lineas.length)) av.push({ nivel: "advertencia", campo: "iva", msg: `El IVA (${pesos(d.iva)}) no es el 19% del neto (debería ser ≈ ${pesos(esp)}).` }); }
+  if (d.tipo === "factura" && d.total != null && (d.neto == null || d.iva == null)) av.push({ nivel: "advertencia", campo: "neto", msg: "Factura sin neto o IVA legible." });
+  if (d.rut_proveedor && !rutValido(d.rut_proveedor)) av.push({ nivel: "advertencia", campo: "rut_proveedor", msg: `El RUT ${d.rut_proveedor} no es válido (el dígito verificador no calza).` });
+  if (d.fecha) { const f = parseFecha(d.fecha); if (!f) av.push({ nivel: "advertencia", campo: "fecha", msg: `No se entiende la fecha «${d.fecha}». Usa dd-mm-aaaa.` }); else if (f > hoy()) av.push({ nivel: "advertencia", campo: "fecha", msg: `La fecha ${verFecha(d.fecha)} está en el futuro.` }); }
+  return av;
+}
+function buscarDuplicado(d, excluirUid) {
+  const num = normNumero(d.numero_documento); if (!num) return null;
+  const rut = limpiarRut(d.rut_proveedor), prov = normTexto(d.proveedor);
+  const coincide = (o) => normNumero(o.numero_documento) === num && ((rut && limpiarRut(o.rut_proveedor) === rut) || (prov && normTexto(o.proveedor) === prov));
+  const g = S.documentos.find((o) => (o.tipo === "boleta" || o.tipo === "factura") && coincide(o));
+  if (g) return `Este documento ya está guardado: ${g.proveedor || "mismo proveedor"}, N° ${g.numero_documento}.`;
+  for (const p of UI.pendientes) { if (p.uid === excluirUid) break; if (p.datos?.dt && coincide(p.datos.dt)) return "Este documento aparece dos veces en esta revisión."; }
+  return null;
+}
+
+async function hashArchivo(file) {
+  try { const buf = await file.arrayBuffer(); const h = await crypto.subtle.digest("SHA-256", buf); return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, "0")).join(""); }
+  catch { return file.name + file.size; }
+}
+async function paginasPdf(file, max) {
+  const pdfjs = await cargarPdf();
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const blobs = [];
+  for (let i = 1; i <= Math.min(pdf.numPages, max); i++) {
+    const page = await pdf.getPage(i);
+    const v1 = page.getViewport({ scale: 1 });
+    const escala = Math.min(2.5, 1600 / Math.max(v1.width, v1.height));
+    const vp = page.getViewport({ scale: escala });
+    const c = document.createElement("canvas"); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+    const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    blobs.push(await new Promise((ok) => c.toBlob(ok, "image/jpeg", 0.88)));
+  }
+  return { blobs, total: pdf.numPages };
+}
+
+async function escanearArchivos(files) {
+  await IA.listo;
+  for (const file of files) {
+    const p = { uid: nuevoId(), nombre: file.name, estado: "leyendo", tipoPedido: UI.tipoEscaneo, avisos: [], datos: null, error: null, foto: null, costo: null, ejemplo: file._ejemplo || null };
+    UI.pendientes.unshift(p);
+    pintarPendientes();
+    procesar(p, file);
+  }
+}
+async function procesar(p, file) {
+  try {
+    const esPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+    const esHeic = /heic|heif/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+    if (esHeic) throw { propio: "Este navegador no puede leer fotos HEIC. En iPhone, súbela desde Fotos (se convierte sola) o configura la cámara en «Más compatible»." };
+    if (!esPdf && !/^image\/(jpeg|png|webp|gif)$/.test(file.type)) throw { propio: `«${file.name}» no es una foto ni un PDF.` };
+    p.hash = await hashArchivo(file);
+    if (S.documentos.some((d) => d.hash && d.hash === p.hash)) p.avisos.push({ nivel: "advertencia", campo: "duplicado", msg: "Esta misma foto ya se escaneó y guardó antes." });
+    let imagenes = [file];
+    if (esPdf) {
+      const { blobs, total } = await paginasPdf(file, Math.max(1, Math.min(IA.maxImgs || 1, 5)));
+      imagenes = blobs;
+      if (total > blobs.length) p.avisos.push({ nivel: "advertencia", campo: "", msg: `El PDF tiene ${total} páginas; se leyeron las primeras ${blobs.length}.` });
+    }
+    p.foto = URL.createObjectURL(imagenes[0]);
+    pintarPendientes();
+    let crudo;
+    if (IA.sample && IA.imagenes) {
+      const prompt = promptEscaneo(p.tipoPedido, imagenes.length);
+      try {
+        crudo = await IA.sample.json(prompt, { images: imagenes, modelTier: "default" });
+      } catch (e) {
+        if (p.ejemplo && ["not_granted", "sampling_disabled", "images_unavailable"].includes(e?.code)) { crudo = RESPUESTAS_EJEMPLO[p.ejemplo]; p.simulado = true; }
+        else throw { propio: errorIA(e) };
+      }
+      p.costo = costoEstimado(prompt.length, imagenes.length, JSON.stringify(crudo || {}).length);
+    } else if (p.ejemplo) {
+      crudo = RESPUESTAS_EJEMPLO[p.ejemplo]; p.simulado = true;
+    } else {
+      throw { propio: IA.sample ? "En esta vista no se pueden enviar fotos a Claude. Abre la página en claude.ai." : "La IA solo funciona con la página abierta en claude.ai. Puedes probar con las fotos de ejemplo." };
+    }
+    p.datos = normalizarResultado(crudo);
+    const r = p.datos;
+    if (!r.legible) p.avisos.push({ nivel: "error", campo: "", msg: "Foto ilegible: " + (r.motivo_ilegible || "toma una foto más nítida, con buena luz y de frente.") });
+    else if (r.tipo_detectado === "otro") p.avisos.push({ nivel: "advertencia", campo: "", msg: "No se reconoció como boleta, factura, lista ni formulario." });
+    if (p.tipoPedido !== "automatico" && r.tipo_detectado !== "otro" && r.tipo_detectado !== p.tipoPedido) p.avisos.push({ nivel: "advertencia", campo: "", msg: "El tipo que elegiste no coincide con lo que parece ser el documento." });
+    p.estado = "listo";
+  } catch (e) {
+    p.estado = "error"; p.error = e?.propio || "No se pudo leer el archivo. Prueba con otra foto.";
+  }
+  pintarPendientes();
+}
+
+/* ---------- Pintar tarjetas de revisión ---------- */
+const ETIQUETA_TIPO = { boleta_factura: "Boleta / Factura", lista: "Lista", formulario: "Formulario", otro: "No reconocido" };
+const esDudoso = (bloque, ruta) => bloque.dudosos.includes(ruta);
+function nombresColumnas(tipo) { const m = {}; for (const c of S.columnas[tipo]) m[c.clave] = c.nombre; return m; }
+function campoInput(p, ruta, etiqueta, valor, tipo, dudoso, extra = "") {
+  return `<label class="campo ${dudoso ? "dudoso" : ""}"><span>${esc(etiqueta)}${dudoso ? ' <span class="tag-dudoso">Revisar</span>' : ""}</span>
+    <input data-uid="${p.uid}" data-ruta="${ruta}" data-tipo="${tipo}" value="${esc(valor)}" ${tipo === "monto" ? 'inputmode="numeric" class="num"' : ""} ${extra}></label>`;
+}
+function camposExtras(p, bloque, tipo, prefijo) {
+  return S.columnas[tipo].filter((c) => !c.base && c.activa).map((c) => campoInput(p, `${prefijo}.extras.${c.clave}`, c.nombre, bloque.extras[c.clave] ?? "", "texto", esDudoso(bloque, "extras." + c.clave))).join("");
+}
+function htmlTarjeta(p) {
+  const r = p.datos;
+  const tipo = r ? ETIQUETA_TIPO[r.tipo_detectado] : (p.estado === "error" ? "Error" : "");
+  let cuerpo = "";
+  if (p.estado === "leyendo") cuerpo = `<div class="cargando"><span class="spin"></span>Leyendo el documento con IA… puede tardar hasta un minuto.</div>`;
+  else if (p.estado === "error") cuerpo = `<div class="aviso error">${esc(p.error)}</div>`;
+  else if (r.dt) cuerpo = htmlTributario(p, r.dt);
+  else if (r.li) cuerpo = htmlLista(p, r.li);
+  else if (r.fo) cuerpo = htmlFormulario(p, r.fo);
+  const obs = r && (r.dt || r.li || r.fo)?.obs;
+  const guardable = p.estado === "listo" && r && (r.dt || r.li || r.fo);
+  return `<article class="doc" id="p-${p.uid}">
+    <div class="doc-cab"><div><h3>${esc(p.nombre)}</h3><span class="small muted">${esc(tipo)}${p.simulado ? " · respuesta de ejemplo (sin IA)" : ""}</span></div>
+      ${p.costo ? `<span class="small muted mono" title="Lo que costaría con la API de Claude">Costo estimado: ${p.costo.texto}</span>` : ""}</div>
+    <div class="doc-cuerpo">
+      <div class="doc-foto">${p.foto ? `<img src="${p.foto}" alt="Foto de ${esc(p.nombre)}">` : `<div class="vacio small">Sin vista previa</div>`}</div>
+      <div class="doc-datos">${cuerpo}
+        <div class="avisos" id="av-${p.uid}">${htmlAvisos(p)}</div>
+        ${obs ? `<div class="aviso info">Nota de la IA: ${esc(obs)}</div>` : ""}
+      </div>
+    </div>
+    <div class="doc-pie">
+      ${guardable ? `<label class="izq small fila" style="gap:6px" id="forzar-wrap-${p.uid}" ${tieneDuplicado(p) ? "" : "hidden"}><input type="checkbox" style="width:auto" data-forzar="${p.uid}" ${p.forzar ? "checked" : ""}> Guardar de todas formas</label>` : ""}
+      <button class="btn" data-action="descartar" data-uid="${p.uid}">${guardable ? "Descartar" : "Quitar"}</button>
+      ${guardable ? `<button class="btn primario" data-action="guardar" data-uid="${p.uid}" id="guardar-${p.uid}" ${tieneDuplicado(p) && !p.forzar ? "disabled" : ""}>Guardar</button>` : ""}
+    </div></article>`;
+}
+function avisosVivos(p) {
+  const av = [...p.avisos];
+  const r = p.datos;
+  if (r?.dt) {
+    av.push(...validarTributario(r.dt));
+    const dup = buscarDuplicado(r.dt, p.uid); if (dup) av.push({ nivel: "advertencia", campo: "duplicado", msg: dup });
+    const problemas = av.some((a) => ["neto", "iva", "total"].includes(a.campo) || a.campo.startsWith("lineas["));
+    if (!problemas && r.dt.lineas.length && r.dt.total != null) av.unshift({ nivel: "ok", campo: "", msg: "Las sumas cuadran." });
+  }
+  return av;
+}
+const tieneDuplicado = (p) => avisosVivos(p).some((a) => a.campo === "duplicado");
+function htmlAvisos(p) { return avisosVivos(p).map((a) => `<div class="aviso ${a.nivel}">${esc(a.msg)}</div>`).join(""); }
+function htmlTributario(p, d) {
+  const n = nombresColumnas("boleta_factura");
+  const lineas = d.lineas.map((l, i) => {
+    const c = (campo) => esDudoso(d, `lineas[${i}].${campo}`) ? "dudoso" : "";
+    return `<tr><td class="${c("descripcion")}"><input data-uid="${p.uid}" data-ruta="dt.lineas.${i}.descripcion" data-tipo="texto" value="${esc(l.descripcion)}" aria-label="Descripción línea ${i + 1}"></td>
+      <td class="${c("cantidad")}" style="width:70px"><input class="num" inputmode="decimal" data-uid="${p.uid}" data-ruta="dt.lineas.${i}.cantidad" data-tipo="numero" value="${esc(l.cantidad ?? "")}" aria-label="Cantidad línea ${i + 1}"></td>
+      <td class="${c("precio_unitario")}" style="width:110px"><input class="num" inputmode="numeric" data-uid="${p.uid}" data-ruta="dt.lineas.${i}.precio_unitario" data-tipo="monto" value="${esc(pesos(l.precio_unitario))}" aria-label="Precio unitario línea ${i + 1}"></td>
+      <td class="${c("total")}" style="width:110px"><input class="num" inputmode="numeric" data-uid="${p.uid}" data-ruta="dt.lineas.${i}.total" data-tipo="monto" value="${esc(pesos(l.total))}" aria-label="Total línea ${i + 1}"></td>
+      <td class="acc"><button class="btn texto chico" data-action="linea-quitar" data-uid="${p.uid}" data-i="${i}" aria-label="Quitar línea ${i + 1}">✕</button></td></tr>`;
+  }).join("");
+  return `<div class="fila"><div class="seg" role="group" aria-label="Tipo">
+      <button data-action="dt-tipo" data-uid="${p.uid}" data-v="boleta" aria-pressed="${d.tipo === "boleta"}">Boleta</button>
+      <button data-action="dt-tipo" data-uid="${p.uid}" data-v="factura" aria-pressed="${d.tipo === "factura"}">Factura</button></div></div>
+    <div class="grid-campos">
+      ${campoInput(p, "dt.fecha", n.fecha, verFecha(d.fecha), "fecha", esDudoso(d, "fecha"), 'placeholder="dd-mm-aaaa"')}
+      ${campoInput(p, "dt.proveedor", n.proveedor, d.proveedor ?? "", "texto", esDudoso(d, "proveedor"))}
+      ${campoInput(p, "dt.rut_proveedor", n.rut_proveedor, d.rut_proveedor ?? "", "texto", esDudoso(d, "rut_proveedor"))}
+      ${campoInput(p, "dt.numero_documento", n.numero_documento, d.numero_documento ?? "", "texto", esDudoso(d, "numero_documento"))}
+      ${campoInput(p, "dt.neto", n.neto, pesos(d.neto), "monto", esDudoso(d, "neto"))}
+      ${campoInput(p, "dt.iva", n.iva, pesos(d.iva), "monto", esDudoso(d, "iva"))}
+      ${campoInput(p, "dt.total", n.total, pesos(d.total), "monto", esDudoso(d, "total"))}
+      ${camposExtras(p, d, "boleta_factura", "dt")}
+    </div>
+    <div class="bloque" style="gap:6px"><span class="small muted">Detalle de productos</span>
+      <div class="tabla"><table><thead><tr><th>Descripción</th><th class="n">Cant.</th><th class="n">P. unitario</th><th class="n">Total</th><th></th></tr></thead>
+      <tbody>${lineas || `<tr><td colspan="5" class="vacio">Sin líneas</td></tr>`}</tbody></table></div>
+      <div><button class="btn chico" data-action="linea-agregar" data-uid="${p.uid}">+ Agregar línea</button></div></div>`;
+}
+function htmlLista(p, l) {
+  const n = nombresColumnas("lista");
+  const filas = l.items.map((it, i) => {
+    const c = (campo) => esDudoso(l, `items[${i}].${campo}`) ? "dudoso" : "";
+    return `<tr><td class="${c("texto")}"><input data-uid="${p.uid}" data-ruta="li.items.${i}.texto" data-tipo="texto" value="${esc(it.texto)}" aria-label="Ítem ${i + 1}"></td>
+      <td class="${c("cantidad")}" style="width:110px"><input data-uid="${p.uid}" data-ruta="li.items.${i}.cantidad" data-tipo="texto" value="${esc(it.cantidad)}" aria-label="Cantidad ítem ${i + 1}"></td>
+      <td style="width:80px;text-align:center"><input type="checkbox" style="width:auto" data-uid="${p.uid}" data-ruta="li.items.${i}.marcado" data-tipo="bool" ${it.marcado ? "checked" : ""} aria-label="Marcado ítem ${i + 1}"></td>
+      <td class="acc"><button class="btn texto chico" data-action="item-quitar" data-uid="${p.uid}" data-i="${i}" aria-label="Quitar ítem ${i + 1}">✕</button></td></tr>`;
+  }).join("");
+  return `<div class="grid-campos">${campoInput(p, "li.titulo", n.titulo, l.titulo ?? "", "texto", esDudoso(l, "titulo"))}
+      ${campoInput(p, "li.fecha", n.fecha, verFecha(l.fecha), "fecha", esDudoso(l, "fecha"), 'placeholder="dd-mm-aaaa"')}${camposExtras(p, l, "lista", "li")}</div>
+    <div class="tabla"><table><thead><tr><th>${esc(n.texto)}</th><th>${esc(n.cantidad)}</th><th>Tachado</th><th></th></tr></thead><tbody>${filas}</tbody></table></div>
+    <div><button class="btn chico" data-action="item-agregar" data-uid="${p.uid}">+ Agregar ítem</button></div>`;
+}
+function htmlFormulario(p, f) {
+  const n = nombresColumnas("formulario");
+  const filas = f.campos.map((c, i) => `<tr><td style="width:40%"><input data-uid="${p.uid}" data-ruta="fo.campos.${i}.etiqueta" data-tipo="texto" value="${esc(c.etiqueta)}" aria-label="Etiqueta ${i + 1}"></td>
+      <td class="${esDudoso(f, `campos[${i}].valor`) ? "dudoso" : ""}"><input data-uid="${p.uid}" data-ruta="fo.campos.${i}.valor" data-tipo="texto" value="${esc(c.valor)}" aria-label="Valor ${i + 1}"></td>
+      <td class="acc"><button class="btn texto chico" data-action="campo-quitar" data-uid="${p.uid}" data-i="${i}" aria-label="Quitar campo ${i + 1}">✕</button></td></tr>`).join("");
+  return `<div class="grid-campos">${campoInput(p, "fo.titulo", n.titulo, f.titulo ?? "", "texto", esDudoso(f, "titulo"))}
+      ${campoInput(p, "fo.fecha", n.fecha, verFecha(f.fecha), "fecha", esDudoso(f, "fecha"), 'placeholder="dd-mm-aaaa"')}${camposExtras(p, f, "formulario", "fo")}</div>
+    <div class="tabla"><table><thead><tr><th>Campo</th><th>Valor</th><th></th></tr></thead><tbody>${filas}</tbody></table></div>
+    <div><button class="btn chico" data-action="campo-agregar" data-uid="${p.uid}">+ Agregar campo</button></div>`;
+}
+function pintarPendientes() {
+  const cont = $("#pendientes");
+  if (!UI.pendientes.length) { cont.innerHTML = ""; return; }
+  cont.innerHTML = `<h3>Revisar antes de guardar (${UI.pendientes.length})</h3>` + UI.pendientes.map(htmlTarjeta).join("");
+}
+function refrescarAvisos(p) {
+  const el = $("#av-" + p.uid); if (el) el.innerHTML = htmlAvisos(p);
+  const dup = tieneDuplicado(p);
+  const w = $("#forzar-wrap-" + p.uid); if (w) w.hidden = !dup;
+  const b = $("#guardar-" + p.uid); if (b) b.disabled = dup && !p.forzar;
+}
+function asignarRuta(obj, ruta, valor) {
+  const partes = ruta.split("."); let o = obj;
+  for (let i = 0; i < partes.length - 1; i++) o = o[partes[i]];
+  o[partes.at(-1)] = valor;
+}
+function valorDesdeInput(el) {
+  const t = el.dataset.tipo, v = el.type === "checkbox" ? el.checked : el.value;
+  if (t === "monto") return parseMonto(v);
+  if (t === "numero") return parseNum(v);
+  if (t === "bool") return !!v;
+  if (t === "fecha") { const f = parseFecha(v); return f ? isoFecha(f) : (String(v).trim() || null); }
+  return String(v).trim() || null;
+}
+function guardarPendiente(p) {
+  const r = p.datos; const base = { id: nuevoId(), archivo: p.nombre, hash: p.hash || null, guardado: new Date().toISOString() };
+  let doc;
+  if (r.dt) { const d = r.dt; doc = { ...base, tipo: d.tipo, fecha: d.fecha, proveedor: d.proveedor, rut_proveedor: d.rut_proveedor ? formatRut(d.rut_proveedor) : null, numero_documento: d.numero_documento,
+    lineas: d.lineas.filter((l) => l.descripcion || l.total != null || l.cantidad != null), neto: d.neto, iva: d.iva, total: d.total, extras: d.extras, dudosos: d.dudosos }; }
+  else if (r.li) doc = { ...base, tipo: "lista", fecha: r.li.fecha, titulo: r.li.titulo, items: r.li.items.filter((i) => i.texto || i.cantidad), extras: r.li.extras, dudosos: r.li.dudosos };
+  else doc = { ...base, tipo: "formulario", fecha: r.fo.fecha, titulo: r.fo.titulo, campos: r.fo.campos.filter((c) => c.etiqueta || c.valor), extras: r.fo.extras, dudosos: r.fo.dudosos };
+  S.documentos.push(doc);
+  Store.guardar("documentos");
+  UI.pendientes = UI.pendientes.filter((x) => x.uid !== p.uid);
+  pintarPendientes(); pintarGuardados();
+  toast("Documento guardado");
+}
+function pintarGuardados() {
+  const docs = [...S.documentos].reverse();
+  const tot = docs.filter((d) => d.tipo === "boleta" || d.tipo === "factura").reduce((a, d) => a + (d.total || 0), 0);
+  $("#guardados-resumen").innerHTML = !docs.length ? `<div class="panel vacio">Todavía no hay documentos guardados.</div>` :
+    `<div class="tabla"><table><thead><tr><th>Tipo</th><th>Fecha</th><th>Proveedor / título</th><th>N°</th><th class="n">Total</th></tr></thead><tbody>
+    ${docs.slice(0, 8).map((d) => `<tr><td>${esc(cap(d.tipo))}${d.ejemplo ? ' <span class="pill">ejemplo</span>' : ""}</td><td class="mono">${esc(verFecha(d.fecha))}</td><td>${esc(d.proveedor || d.titulo || "")}</td><td class="mono">${esc(d.numero_documento || "")}</td><td class="n mono">${esc(pesos(d.total))}</td></tr>`).join("")}
+    </tbody></table></div><p class="small muted">${docs.length} documento(s) · total en boletas y facturas: <span class="mono">${pesos(tot)}</span></p>`;
+}
+const cap = (s) => String(s || "").charAt(0).toUpperCase() + String(s || "").slice(1);
+
+/* ============================================================
+   EXCEL
+   ============================================================ */
+const FMT_PESOS = '"$"#,##0';
+const FMT_FECHA = "dd-mm-yyyy";
+function valorColumna(doc, clave) {
+  if (clave.startsWith("extra:")) return doc.extras?.[clave.slice(6)] ?? null;
+  if (clave === "fecha") { const f = parseFecha(doc.fecha); return f || (doc.fecha || null); }
+  if (clave === "tipo") return cap(doc.tipo);
+  return doc[clave] ?? null;
+}
+function columnasExcel(tipo) { return S.columnas[tipo].filter((c) => c.activa).map((c) => ({ clave: c.base ? c.clave : "extra:" + c.clave, nombre: c.nombre, base: c.base })); }
+const ES_MONTO = new Set(["neto", "iva", "total", "precio_unitario"]);
+function estiloHoja(ws, cols) {
+  const cab = ws.getRow(1); cab.font = { bold: true, color: { argb: "FFFFFFFF" } };
+  cab.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF2445A8" } };
+  ws.views = [{ state: "frozen", ySplit: 1 }];
+  if (ws.rowCount >= 1 && cols) ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: cols } };
+  ws.columns.forEach((c) => { let max = 10; c.eachCell({ includeEmpty: false }, (cell) => { const v = cell.value; const l = v instanceof Date ? 10 : String(v ?? "").length; if (l > max) max = l; }); c.width = Math.min(max + 2, 50); });
+}
+function filasTributarias(docs) {
+  const cols = columnasExcel("boleta_factura");
+  return { cols, filas: docs.map((d) => cols.map((c) => valorColumna(d, c.clave))) };
+}
+function agregarFilas(ws, cols, filas) {
+  for (const f of filas) {
+    const row = ws.addRow(f);
+    cols.forEach((c, i) => { const cell = row.getCell(i + 1); if (ES_MONTO.has(c.clave)) cell.numFmt = FMT_PESOS; if (c.clave === "fecha" && cell.value instanceof Date) cell.numFmt = FMT_FECHA; });
+  }
+}
+function construirHojas(wb, docs) {
+  const trib = docs.filter((d) => d.tipo === "boleta" || d.tipo === "factura");
+  const { cols, filas } = filasTributarias(trib);
+  const ws = wb.addWorksheet(NOMBRE_HOJA.boleta_factura);
+  ws.addRow(cols.map((c) => c.nombre)); agregarFilas(ws, cols, filas); estiloHoja(ws, cols.length);
+
+  const det = wb.addWorksheet("Detalle");
+  const colsDet = [{ clave: "fecha", nombre: "Fecha" }, { clave: "proveedor", nombre: "Proveedor" }, { clave: "numero_documento", nombre: "N° documento" }, { clave: "descripcion", nombre: "Descripción" }, { clave: "cantidad", nombre: "Cantidad" }, { clave: "precio_unitario", nombre: "P. unitario" }, { clave: "total", nombre: "Total" }];
+  det.addRow(colsDet.map((c) => c.nombre));
+  agregarFilas(det, colsDet, trib.flatMap((d) => (d.lineas || []).map((l) => [parseFecha(d.fecha) || d.fecha, d.proveedor, d.numero_documento, l.descripcion, l.cantidad, l.precio_unitario, l.total])));
+  estiloHoja(det, colsDet.length);
+
+  const colsL = columnasExcel("lista");
+  const wl = wb.addWorksheet(NOMBRE_HOJA.lista); wl.addRow(colsL.map((c) => c.nombre));
+  agregarFilas(wl, colsL, docs.filter((d) => d.tipo === "lista").flatMap((d) => (d.items || []).map((it) => colsL.map((c) => {
+    if (c.clave === "texto") return it.texto; if (c.clave === "cantidad") return it.cantidad; if (c.clave === "marcado") return it.marcado ? "Sí" : "No";
+    return valorColumna(d, c.clave);
+  }))));
+  estiloHoja(wl, colsL.length);
+
+  const forms = docs.filter((d) => d.tipo === "formulario");
+  const colsF = columnasExcel("formulario");
+  const etiquetas = [...new Set(forms.flatMap((f) => (f.campos || []).map((c) => c.etiqueta)))];
+  const wf = wb.addWorksheet(NOMBRE_HOJA.formulario);
+  wf.addRow([...colsF.map((c) => c.nombre), ...etiquetas]);
+  agregarFilas(wf, colsF, forms.map((f) => [...colsF.map((c) => valorColumna(f, c.clave)), ...etiquetas.map((e) => (f.campos || []).find((c) => c.etiqueta === e)?.valor ?? null)]));
+  estiloHoja(wf, colsF.length + etiquetas.length);
+}
+function construirResumen(wb, registros) {
+  // registros: [{fecha: Date|null, proveedor, rut, neto, iva, total}]
+  const ws = wb.addWorksheet("Resumen");
+  const porMes = new Map(), porProv = new Map();
+  for (const r of registros) {
+    const mes = r.fecha ? `${r.fecha.getFullYear()}-${String(r.fecha.getMonth() + 1).padStart(2, "0")}` : "Sin fecha";
+    const m = porMes.get(mes) || { n: 0, neto: 0, iva: 0, total: 0 }; m.n++; m.neto += r.neto || 0; m.iva += r.iva || 0; m.total += r.total || 0; porMes.set(mes, m);
+    const k = r.proveedor || "Sin proveedor"; const p = porProv.get(k) || { rut: r.rut || "", n: 0, total: 0 }; p.n++; p.total += r.total || 0; porProv.set(k, p);
+  }
+  ws.addRow(["Totales por mes"]).font = { bold: true, size: 13 };
+  const cab1 = ws.addRow(["Mes", "Documentos", "Neto", "IVA", "Total"]); cab1.font = { bold: true };
+  for (const [mes, m] of [...porMes].sort()) { const r = ws.addRow([mes, m.n, m.neto, m.iva, m.total]); [3, 4, 5].forEach((i) => (r.getCell(i).numFmt = FMT_PESOS)); }
+  const tm = ws.addRow(["Total", registros.length, sum(registros, "neto"), sum(registros, "iva"), sum(registros, "total")]); tm.font = { bold: true }; [3, 4, 5].forEach((i) => (tm.getCell(i).numFmt = FMT_PESOS));
+  ws.addRow([]);
+  ws.addRow(["Totales por proveedor"]).font = { bold: true, size: 13 };
+  const cab2 = ws.addRow(["Proveedor", "RUT", "Documentos", "Total"]); cab2.font = { bold: true };
+  for (const [prov, p] of [...porProv].sort((a, b) => b[1].total - a[1].total)) { const r = ws.addRow([prov, p.rut, p.n, p.total]); r.getCell(4).numFmt = FMT_PESOS; }
+  [cab1, cab2].forEach((c) => (c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE6EBF8" } }));
+  ws.getColumn(1).width = 34; ws.getColumn(2).width = 14; ws.getColumn(3).width = 14; ws.getColumn(4).width = 14; ws.getColumn(5).width = 14;
+}
+const sum = (arr, k) => arr.reduce((a, r) => a + (r[k] || 0), 0);
+function registrosDesdeDocs(docs) { return docs.filter((d) => d.tipo === "boleta" || d.tipo === "factura").map((d) => ({ fecha: parseFecha(d.fecha), proveedor: d.proveedor, rut: d.rut_proveedor, neto: d.neto, iva: d.iva, total: d.total })); }
+
+async function ofrecerDescarga(wb, nombre) {
+  const buf = await wb.xlsx.writeBuffer();
+  const dl = window.claude?.use ? await claude.use("downloads").catch(() => null) : null;
+  if (!dl) { avisoExcel("error", "La descarga solo funciona con la página abierta en claude.ai."); return; }
+  try { await dl.save({ filename: nombre, data: new Blob([buf]) }); avisoExcel("ok", `Listo: ${nombre}`); }
+  catch (e) { avisoExcel(e?.code === "declined" ? "advertencia" : "error", e?.code === "declined" ? "Cancelaste la descarga." : "No se pudo descargar el archivo."); }
+}
+function avisoExcel(nivel, msg) { $("#excel-estado").innerHTML = `<div class="aviso ${nivel}">${esc(msg)}</div>`; }
+async function excelNuevo() {
+  if (!S.documentos.length) { avisoExcel("advertencia", "No hay documentos guardados todavía."); return; }
+  avisoExcel("info", "Preparando el Excel…");
+  try {
+    await cargarScript(LIB.excel);
+    const wb = new ExcelJS.Workbook(); wb.creator = "Asistente de Negocio";
+    construirHojas(wb, S.documentos);
+    construirResumen(wb, registrosDesdeDocs(S.documentos));
+    await ofrecerDescarga(wb, `documentos_${isoFecha(hoy())}.xlsx`);
+  } catch (e) { avisoExcel("error", "No se pudo crear el Excel: " + (e?.message || "error desconocido")); }
+}
+function indiceCabeceras(ws) { const m = {}; ws.getRow(1).eachCell((c, i) => { m[String(c.value ?? "").trim().toLowerCase()] = i; }); return m; }
+async function excelExistente(file) {
+  avisoExcel("info", "Leyendo tu Excel…");
+  try {
+    await cargarScript(LIB.excel);
+    const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await file.arrayBuffer());
+    const nb = nombresColumnas("boleta_factura");
+    let ws = wb.getWorksheet(NOMBRE_HOJA.boleta_factura);
+    const trib = S.documentos.filter((d) => d.tipo === "boleta" || d.tipo === "factura");
+    let agregados = 0, repetidos = 0;
+    if (!ws) {
+      // El archivo no tiene nuestras hojas: se agregan completas
+      const tmp = wb; construirHojas(tmp, S.documentos); agregados = S.documentos.length;
+    } else {
+      const idx = indiceCabeceras(ws);
+      const cN = idx[nb.numero_documento.toLowerCase()], cP = idx[nb.proveedor.toLowerCase()], cR = idx[nb.rut_proveedor.toLowerCase()];
+      const existentes = new Set();
+      ws.eachRow((row, i) => { if (i === 1) return; existentes.add(normNumero(cN ? row.getCell(cN).value : "") + "|" + normTexto(cP ? row.getCell(cP).value : "")); if (cR) existentes.add(normNumero(cN ? row.getCell(cN).value : "") + "|r" + limpiarRut(row.getCell(cR).value)); });
+      const nuevos = trib.filter((d) => {
+        const k1 = normNumero(d.numero_documento) + "|" + normTexto(d.proveedor), k2 = normNumero(d.numero_documento) + "|r" + limpiarRut(d.rut_proveedor);
+        const rep = normNumero(d.numero_documento) && (existentes.has(k1) || (limpiarRut(d.rut_proveedor) && existentes.has(k2)));
+        if (rep) repetidos++; return !rep;
+      });
+      // Escribir según las cabeceras que ya tiene el archivo
+      const cols = columnasExcel("boleta_factura");
+      for (const d of nuevos) {
+        const fila = []; cols.forEach((c) => { const pos = idx[c.nombre.toLowerCase()]; if (pos) fila[pos - 1] = valorColumna(d, c.clave); });
+        const row = ws.addRow(fila); cols.forEach((c) => { const pos = idx[c.nombre.toLowerCase()]; if (!pos) return; if (ES_MONTO.has(c.clave)) row.getCell(pos).numFmt = FMT_PESOS; if (c.clave === "fecha") row.getCell(pos).numFmt = FMT_FECHA; });
+      }
+      const det = wb.getWorksheet("Detalle");
+      if (det) for (const d of nuevos) for (const l of d.lineas || []) { const r = det.addRow([parseFecha(d.fecha) || d.fecha, d.proveedor, d.numero_documento, l.descripcion, l.cantidad, l.precio_unitario, l.total]); r.getCell(1).numFmt = FMT_FECHA; [6, 7].forEach((i) => (r.getCell(i).numFmt = FMT_PESOS)); }
+      agregados = nuevos.length;
+    }
+    // Rehacer el Resumen con todas las filas del archivo
+    const old = wb.getWorksheet("Resumen"); if (old) wb.removeWorksheet(old.id);
+    const hoja = wb.getWorksheet(NOMBRE_HOJA.boleta_factura); const idx = indiceCabeceras(hoja); const regs = [];
+    const val = (row, nombre) => { const p = idx[String(nombre).toLowerCase()]; if (!p) return null; const v = row.getCell(p).value; return v && typeof v === "object" && "result" in v ? v.result : v; };
+    hoja.eachRow((row, i) => { if (i === 1) return; regs.push({ fecha: parseFecha(val(row, nb.fecha)), proveedor: val(row, nb.proveedor), rut: val(row, nb.rut_proveedor), neto: parseMonto(val(row, nb.neto)), iva: parseMonto(val(row, nb.iva)), total: parseMonto(val(row, nb.total)) }); });
+    construirResumen(wb, regs);
+    avisoExcel("info", `Se agregarán ${agregados} documento(s)${repetidos ? `; ${repetidos} ya estaban en el archivo y se omitieron` : ""}.`);
+    await ofrecerDescarga(wb, file.name.replace(/\.xlsx$/i, "") + "_actualizado.xlsx");
+  } catch (e) { avisoExcel("error", "No se pudo leer ese Excel. ¿Es un archivo .xlsx válido?"); }
+}
+function pintarColumnas() {
+  const tipo = UI.tipoCol;
+  $$("#tipo-columnas button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.tipo === tipo));
+  const cols = S.columnas[tipo];
+  $("#editor-columnas").innerHTML = `<div class="tabla"><table><thead><tr><th>Columna</th><th>Para la IA</th><th>Visible</th><th></th></tr></thead><tbody>
+    ${cols.map((c, i) => `<tr><td><input data-col="${i}" data-campo="nombre" value="${esc(c.nombre)}" aria-label="Nombre de la columna ${esc(c.nombre)}"></td>
+      <td>${c.base ? `<span class="small muted">Columna base</span>` : `<input data-col="${i}" data-campo="desc" value="${esc(c.desc)}" placeholder="Qué buscar" aria-label="Descripción para la IA">`}</td>
+      <td style="text-align:center"><input type="checkbox" style="width:auto" data-col="${i}" data-campo="activa" ${c.activa ? "checked" : ""} aria-label="Visible"></td>
+      <td class="acc">${i > 0 ? `<button class="btn texto chico" data-action="col-subir" data-i="${i}" aria-label="Subir">↑</button>` : ""}${c.base ? "" : `<button class="btn texto chico" data-action="col-quitar" data-i="${i}" aria-label="Quitar columna">✕</button>`}</td></tr>`).join("")}
+    </tbody></table></div>`;
+}
+function pintarTablaDocumentos() {
+  const docs = [...S.documentos].reverse();
+  $("#tabla-documentos").innerHTML = !docs.length ? `<div class="panel vacio">Todavía no hay documentos. Escanea uno en la pestaña Escanear.</div>` :
+    `<div class="tabla"><table><thead><tr><th>Tipo</th><th>Fecha</th><th>Proveedor / título</th><th>RUT</th><th>N°</th><th class="n">Neto</th><th class="n">IVA</th><th class="n">Total</th><th></th></tr></thead><tbody>
+    ${docs.map((d) => `<tr><td>${esc(cap(d.tipo))}${d.ejemplo ? ' <span class="pill">ejemplo</span>' : ""}</td><td class="mono">${esc(verFecha(d.fecha))}</td><td>${esc(d.proveedor || d.titulo || "")}</td><td class="mono">${esc(d.rut_proveedor || "")}</td><td class="mono">${esc(d.numero_documento || "")}</td>
+      <td class="n mono">${esc(pesos(d.neto))}</td><td class="n mono">${esc(pesos(d.iva))}</td><td class="n mono">${esc(pesos(d.total))}</td>
+      <td class="acc"><button class="btn texto chico" data-action="doc-borrar" data-id="${d.id}" aria-label="Borrar documento">Borrar</button></td></tr>`).join("")}
+    </tbody></table></div>`;
+}
+
+/* ============================================================
+   CONOCIMIENTO
+   ============================================================ */
+function pintarNotas() {
+  $("#lista-notas").innerHTML = !S.notas.length ? `<div class="panel vacio">Sin notas todavía.</div>` : S.notas.map((n) => `<div class="nota-item">
+    <textarea rows="2" data-nota="${n.id}" aria-label="Nota">${esc(n.texto)}</textarea>
+    <div class="fila" style="justify-content:space-between"><span class="small muted">${n.ejemplo ? "Ejemplo · " : ""}Los cambios se guardan solos</span><button class="btn texto chico" data-action="nota-borrar" data-id="${n.id}">Borrar</button></div></div>`).join("");
+}
+function pintarArchivos() {
+  $("#lista-archivos").innerHTML = !S.archivos.length ? `<div class="panel vacio">No has subido documentos.</div>` : S.archivos.map((a) => `<details class="nota-item">
+    <summary>${esc(a.nombre)} <span class="small muted">· ${miles(a.texto.length)} caracteres</span></summary>
+    <pre style="white-space:pre-wrap;font:0.85rem var(--f-mono);max-height:240px;overflow:auto;margin:0">${esc(a.texto.slice(0, 3000))}${a.texto.length > 3000 ? "\n…" : ""}</pre>
+    <div><button class="btn texto chico" data-action="archivo-borrar" data-id="${a.id}">Borrar</button></div></details>`).join("");
+}
+async function leerTextoArchivo(file) {
+  const n = file.name.toLowerCase();
+  if (/\.(txt|md|csv)$/.test(n)) return await file.text();
+  if (n.endsWith(".docx")) { await cargarScript(LIB.word); const r = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() }); return r.value; }
+  if (n.endsWith(".xlsx")) {
+    await cargarScript(LIB.excel); const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await file.arrayBuffer());
+    const out = []; wb.eachSheet((ws) => { out.push(`# ${ws.name}`); ws.eachRow((row) => out.push(row.values.slice(1).map((v) => textoCelda(v)).join(" | "))); });
+    return out.join("\n");
+  }
+  if (n.endsWith(".pdf")) {
+    const pdfjs = await cargarPdf(); const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise; const out = [];
+    for (let i = 1; i <= Math.min(pdf.numPages, 30); i++) { const t = await (await pdf.getPage(i)).getTextContent(); out.push(t.items.map((it) => it.str).join(" ")); }
+    return out.join("\n\n");
+  }
+  throw new Error("formato");
+}
+function textoCelda(v) {
+  if (v === null || v === undefined) return "";
+  if (v instanceof Date) return verFecha(isoFecha(v));
+  if (typeof v === "object") { if ("result" in v) return textoCelda(v.result); if ("text" in v) return String(v.text); if (v.richText) return v.richText.map((r) => r.text).join(""); if ("hyperlink" in v) return String(v.text || v.hyperlink); }
+  return String(v);
+}
+async function subirConocimiento(files) {
+  const est = $("#archivos-estado");
+  for (const f of files) {
+    est.innerHTML = `<div class="aviso info"><span class="spin"></span> Leyendo ${esc(f.name)}…</div>`;
+    try {
+      const texto = (await leerTextoArchivo(f)).replace(/\n{3,}/g, "\n\n").trim();
+      if (!texto) { est.innerHTML = `<div class="aviso advertencia">«${esc(f.name)}» no tiene texto que se pueda leer (¿es un escaneo? Súbelo en la pestaña Escanear).</div>`; continue; }
+      S.archivos.push({ id: nuevoId(), nombre: f.name, texto: texto.slice(0, 40000) });
+      Store.guardar("archivos"); pintarArchivos();
+      est.innerHTML = `<div class="aviso ok">Listo: ${esc(f.name)}${texto.length > 40000 ? " (se guardaron los primeros 40.000 caracteres)" : ""}.</div>`;
+    } catch (e) {
+      est.innerHTML = `<div class="aviso error">No se pudo leer «${esc(f.name)}». Formatos: PDF con texto, Word (.docx), Excel (.xlsx) o TXT.</div>`;
+    }
+  }
+}
+
+/* ---------- Contactos ---------- */
+const CAMPOS_CONTACTO = [["nombre", "Nombre", /nombre|cliente|razon|contacto/], ["telefono", "Teléfono", /tel|cel|fono|whats|movil|móvil/], ["correo", "Correo", /correo|mail|e-mail/], ["deuda", "Deuda", /deuda|saldo|monto|debe|pendiente/], ["vence", "Vencimiento", /venc|fecha|pago/]];
+function parseCSV(texto) {
+  const sep = (texto.split("\n")[0].match(/;/g) || []).length > (texto.split("\n")[0].match(/,/g) || []).length ? ";" : ",";
+  const filas = []; let fila = [], campo = "", comillas = false;
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto[i];
+    if (comillas) { if (c === '"' && texto[i + 1] === '"') { campo += '"'; i++; } else if (c === '"') comillas = false; else campo += c; }
+    else if (c === '"') comillas = true; else if (c === sep) { fila.push(campo); campo = ""; } else if (c === "\n" || c === "\r") { if (c === "\r" && texto[i + 1] === "\n") i++; fila.push(campo); filas.push(fila); fila = []; campo = ""; } else campo += c;
+  }
+  if (campo || fila.length) { fila.push(campo); filas.push(fila); }
+  return filas.filter((f) => f.some((x) => String(x).trim()));
+}
+async function leerTablaContactos(file) {
+  if (/\.xlsx$/i.test(file.name)) {
+    await cargarScript(LIB.excel); const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await file.arrayBuffer());
+    const ws = wb.worksheets[0]; const filas = [];
+    ws.eachRow((row) => { const vals = []; for (let i = 1; i <= ws.columnCount; i++) { const v = row.getCell(i).value; vals.push(v instanceof Date ? v : (v && typeof v === "object" && "result" in v ? v.result : (typeof v === "object" && v ? textoCelda(v) : v))); } filas.push(vals); });
+    return filas;
+  }
+  return parseCSV(await file.text());
+}
+async function importarContactos(file) {
+  const m = $("#mapeo-contactos");
+  m.innerHTML = `<div class="cargando"><span class="spin"></span>Leyendo ${esc(file.name)}…</div>`;
+  try {
+    const filas = await leerTablaContactos(file);
+    if (filas.length < 2) { m.innerHTML = `<div class="aviso advertencia">El archivo no tiene filas de datos.</div>`; return; }
+    const cab = filas[0].map((h) => String(h ?? "").trim());
+    const mapa = {};
+    for (const [k, , re] of CAMPOS_CONTACTO) { const i = cab.findIndex((h, j) => re.test(normTexto(h) || h.toLowerCase()) && !Object.values(mapa).includes(j)); mapa[k] = i; }
+    UI.mapeo = { nombre: file.name, cab, filas: filas.slice(1), mapa };
+    pintarMapeo();
+  } catch { m.innerHTML = `<div class="aviso error">No se pudo leer el archivo. Usa Excel (.xlsx) o CSV.</div>`; }
+}
+function pintarMapeo() {
+  const M = UI.mapeo, m = $("#mapeo-contactos"); if (!M) { m.innerHTML = ""; return; }
+  const opciones = (sel) => `<option value="-1">— No usar —</option>` + M.cab.map((h, i) => `<option value="${i}" ${i === sel ? "selected" : ""}>${esc(h || "Columna " + (i + 1))}</option>`).join("");
+  const prev = M.filas.slice(0, 4).map((f) => contactoDesdeFila(f, M)).map((c) => `<tr><td>${esc(c.nombre)}</td><td class="mono">${esc(c.telefono)}</td><td>${esc(c.correo)}</td><td class="n mono">${esc(pesos(c.deuda))}</td><td class="mono">${esc(verFecha(c.vence))}</td></tr>`).join("");
+  m.innerHTML = `<div class="bloque"><p><b>${esc(M.nombre)}</b> · ${M.filas.length} filas. Revisa qué columna corresponde a cada dato:</p>
+    <div class="grid-campos">${CAMPOS_CONTACTO.map(([k, n]) => `<label class="campo"><span>${n}${k === "nombre" ? " (obligatorio)" : ""}</span><select data-mapa="${k}">${opciones(M.mapa[k])}</select></label>`).join("")}</div>
+    <div class="tabla"><table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Correo</th><th class="n">Deuda</th><th>Vence</th></tr></thead><tbody>${prev}</tbody></table></div>
+    <div class="fila"><button class="btn primario" data-action="mapeo-importar" ${M.mapa.nombre < 0 ? "disabled" : ""}>Importar ${M.filas.length} contactos</button>
+      <label class="fila small" style="gap:6px"><input type="checkbox" id="mapeo-reemplazar" style="width:auto"> Reemplazar los contactos actuales</label>
+      <button class="btn texto" data-action="mapeo-cancelar">Cancelar</button></div></div>`;
+}
+function contactoDesdeFila(f, M) {
+  const g = (k) => (M.mapa[k] >= 0 ? f[M.mapa[k]] : null);
+  const usados = new Set(Object.values(M.mapa));
+  const extra = {}; M.cab.forEach((h, i) => { if (!usados.has(i) && f[i] !== null && f[i] !== undefined && String(f[i]).trim()) extra[h || "Columna " + (i + 1)] = textoCelda(f[i]); });
+  const v = g("vence"); const fv = parseFecha(v);
+  return { id: nuevoId(), nombre: String(textoCelda(g("nombre")) || "").trim(), telefono: normTelefono(textoCelda(g("telefono"))), correo: String(textoCelda(g("correo")) || "").trim(), deuda: parseMonto(textoCelda(g("deuda")) || null), vence: fv ? isoFecha(fv) : null, extra };
+}
+function pintarContactos() {
+  const cs = S.contactos;
+  $("#tabla-contactos").innerHTML = !cs.length ? `<div class="panel vacio">No hay contactos. Importa tu lista desde Excel o agrégalos a mano.</div>` :
+    `<div class="tabla"><table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Correo</th><th class="n">Deuda</th><th>Vence</th><th></th></tr></thead><tbody>
+    ${cs.map((c) => `<tr><td style="min-width:150px"><input data-contacto="${c.id}" data-campo="nombre" value="${esc(c.nombre)}" aria-label="Nombre"></td>
+      <td style="min-width:140px" class="${c.telefono ? "" : "dudoso"}"><input data-contacto="${c.id}" data-campo="telefono" value="${esc(c.telefono)}" placeholder="Sin teléfono" class="mono" aria-label="Teléfono"></td>
+      <td style="min-width:170px" class="${c.correo ? "" : "dudoso"}"><input data-contacto="${c.id}" data-campo="correo" value="${esc(c.correo)}" placeholder="Sin correo" aria-label="Correo"></td>
+      <td style="min-width:100px"><input data-contacto="${c.id}" data-campo="deuda" value="${esc(pesos(c.deuda))}" class="num" inputmode="numeric" aria-label="Deuda"></td>
+      <td style="min-width:110px"><input data-contacto="${c.id}" data-campo="vence" value="${esc(verFecha(c.vence))}" placeholder="dd-mm-aaaa" class="mono" aria-label="Vencimiento"></td>
+      <td class="acc"><button class="btn texto chico" data-action="contacto-borrar" data-id="${c.id}" aria-label="Borrar contacto">✕</button></td></tr>`).join("")}
+    </tbody></table></div><p class="small muted">${cs.length} contacto(s). Lo marcado en amarillo falta: el asistente avisará en vez de inventarlo.</p>`;
+}
+
+/* ============================================================
+   MENSAJES
+   ============================================================ */
+const CAMPOS_FILTRO = ["nombre", "telefono", "correo", "deuda", "vence", "dias_atraso"];
+function contactosParaIA() {
+  return S.contactos.map((c) => {
+    const f = parseFecha(c.vence); const atraso = f ? Math.round((hoy() - f) / 86400000) : null;
+    return { ...c, dias_atraso: atraso };
+  });
+}
+function promptInterpretar(instr) {
+  const h = hoy();
+  const extras = [...new Set(S.contactos.flatMap((c) => Object.keys(c.extra || {})))];
+  return `Eres el asistente de un pequeño negocio en Chile. Convierte la instrucción del dueño en filtros sobre su lista de contactos. NO escribas los mensajes todavía.
+
+Hoy es ${DIAS[h.getDay()]} ${verFecha(isoFecha(h))} (${isoFecha(h)}).
+Campos de cada contacto: nombre (texto), telefono, correo, deuda (pesos, número), vence (fecha aaaa-mm-dd de vencimiento del pago), dias_atraso (días desde que venció; negativo si aún no vence)${extras.length ? ", y columnas extra: " + extras.join(", ") : ""}.
+Hay ${S.contactos.length} contactos. Algunos nombres: ${S.contactos.slice(0, 40).map((c) => c.nombre).join(", ")}.
+
+Instrucción: «${instr}»
+
+Reglas:
+- Si la instrucción menciona un monto, una fecha o un nombre, conviértelo en filtros. "deben más de $50.000" → {"campo":"deuda","operador":">","valor":50000}.
+- Si es para todos los clientes, deja "filtros" vacío y "todos": true.
+- Si menciona un día ("el viernes", "el 5"), calcula la fecha exacta futura más próxima en "fecha_mencionada" (aaaa-mm-dd).
+- En "ambiguedades" anota en español cualquier cosa que no esté clara y que podría cambiar a quién se escribe o qué se dice (ej. "¿qué viernes?" solo si de verdad es dudoso; no inventes dudas).
+- En "proposito" resume en una frase qué hay que comunicar.
+
+Responde SOLO con JSON:
+{"filtros":[{"campo": string, "operador": ">"|">="|"<"|"<="|"=="|"!="|"contiene"|"vacio"|"no_vacio", "valor": string|number|null}], "todos": boolean, "fecha_mencionada": string|null, "proposito": string, "ambiguedades": [string]}`;
+}
+function promptRedactar(instr, interp, destinatarios, canal, tono) {
+  const reglasCanal = { whatsapp: "WhatsApp: cercano a la lectura en el celular, máximo 3-4 líneas, puede usar 1 emoji si el tono lo permite, sin asunto.",
+    correo: "Correo: incluye un asunto corto en \"asunto\" y un cuerpo con saludo, mensaje y despedida con el nombre del negocio si se conoce.",
+    sms: "SMS: máximo 160 caracteres en total, sin emojis, sin asunto." }[canal];
+  const reglasTono = { formal: "Formal: trato de usted, cordial y respetuoso.", cercano: "Cercano: amable y cálido, trato de tú, como un comerciante de barrio que conoce a su cliente.", breve: "Breve: lo mínimo necesario, directo, sin rodeos." }[tono];
+  const ctx = contextoNegocio(6000);
+  return `Escribe un mensaje personalizado para cada destinatario, en español de Chile.
+
+Instrucción del dueño: «${instr}»
+Propósito: ${interp.proposito || instr}
+${interp.fecha_mencionada ? `Fecha mencionada: ${DIAS[parseFecha(interp.fecha_mencionada)?.getDay() ?? 0]} ${verFecha(interp.fecha_mencionada)}` : ""}
+Hoy es ${DIAS[hoy().getDay()]} ${verFecha(isoFecha(hoy()))}.
+Canal: ${reglasCanal}
+Tono: ${reglasTono}
+${ctx ? "\nInformación del negocio (úsala si sirve, por ejemplo para datos de pago o firma):\n" + ctx + "\n" : ""}
+Reglas:
+- Usa SOLO los datos de cada destinatario (nombre, monto, fecha). No inventes montos, fechas, descuentos ni datos de pago que no estén aquí.
+- Montos con formato chileno: $72.500. Fechas como "viernes 31 de octubre" o "31-10-2026".
+- Si a un destinatario le falta un dato necesario para el mensaje, escribe el mensaje sin ese dato y explica qué falta en "advertencia".
+
+Destinatarios (JSON):
+${JSON.stringify(destinatarios.map((c) => ({ id: c.id, nombre: c.nombre, deuda: c.deuda, deuda_texto: c.deuda != null ? pesos(c.deuda) : null, vence: c.vence ? verFecha(c.vence) : null, dias_atraso: c.dias_atraso, extra: c.extra })))}
+
+Responde SOLO con un JSON array, un objeto por destinatario, en el mismo orden:
+[{"id": string, "asunto": string|null, "texto": string, "advertencia": string|null}]`;
+}
+function cumple(c, f) {
+  const v = c[f.campo] ?? c.extra?.[f.campo];
+  const op = f.operador;
+  if (op === "vacio") return v === null || v === undefined || String(v).trim() === "";
+  if (op === "no_vacio") return !(v === null || v === undefined || String(v).trim() === "");
+  if (v === null || v === undefined || v === "") return false;
+  if (f.campo === "vence") { const a = parseFecha(v), b = parseFecha(f.valor); if (!a || !b) return false; return comparar(a.getTime(), op, b.getTime()); }
+  const num = typeof v === "number" ? v : parseMonto(v); const numF = typeof f.valor === "number" ? f.valor : parseMonto(f.valor);
+  if (["<", "<=", ">", ">="].includes(op) && num !== null && numF !== null) return comparar(num, op, numF);
+  const a = normTexto(v), b = normTexto(f.valor);
+  if (op === "contiene") return a.includes(b);
+  if (op === "==") return a === b || (f.campo === "nombre" && a.includes(b));
+  if (op === "!=") return a !== b;
+  return false;
+}
+const comparar = (a, op, b) => ({ ">": a > b, ">=": a >= b, "<": a < b, "<=": a <= b, "==": a === b, "!=": a !== b }[op] ?? false);
+function textoFiltro(f) {
+  const nombre = { deuda: "deuda", vence: "vencimiento", dias_atraso: "días de atraso", nombre: "nombre", telefono: "teléfono", correo: "correo" }[f.campo] || f.campo;
+  const op = { ">": "mayor a", ">=": "desde", "<": "menor a", "<=": "hasta", "==": "es", "!=": "no es", contiene: "contiene", vacio: "está vacío", no_vacio: "tiene dato" }[f.operador] || f.operador;
+  const val = f.campo === "deuda" ? pesos(parseMonto(f.valor)) : f.campo === "vence" ? verFecha(f.valor) : (f.valor ?? "");
+  return `${cap(nombre)} ${op} ${["vacio", "no_vacio"].includes(f.operador) ? "" : val}`.trim();
+}
+
+/* Modo básico sin IA: entiende instrucciones simples y usa plantillas */
+function proximoDia(nombre) { const i = DIAS.findIndex((d) => normTexto(d) === normTexto(nombre)); if (i < 0) return null; const d = hoy(); let suma = (i - d.getDay() + 7) % 7; if (suma === 0) suma = 7; d.setDate(d.getDate() + suma); return isoFecha(d); }
+function interpretarLocal(instr) {
+  const t = instr.toLowerCase(); const filtros = []; const amb = [];
+  const m = t.match(/(más de|mas de|mayor a|sobre|menos de|menor a|bajo)\s*\$?\s*([\d.]+)/);
+  if (m) filtros.push({ campo: "deuda", operador: /menos|menor|bajo/.test(m[1]) ? "<" : ">", valor: parseMonto(m[2]) });
+  else if (/deud|deben|debe/.test(t)) filtros.push({ campo: "deuda", operador: ">", valor: 0 });
+  if (/vencid/.test(t)) filtros.push({ campo: "dias_atraso", operador: ">", valor: 0 });
+  for (const c of S.contactos) if (c.nombre && normTexto(t).includes(normTexto(c.nombre))) { filtros.length = 0; filtros.push({ campo: "nombre", operador: "==", valor: c.nombre }); break; }
+  let fecha = null; const dm = t.match(/(lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)/); if (dm) fecha = proximoDia(dm[1].replace("miercoles", "miércoles").replace("sabado", "sábado"));
+  return { filtros, todos: !filtros.length, fecha_mencionada: fecha, proposito: instr, ambiguedades: amb, local: true };
+}
+function redactarLocal(instr, interp, c, canal, tono) {
+  const nombre = c.nombre.split(" ")[0];
+  const fecha = interp.fecha_mencionada ? `${DIAS[parseFecha(interp.fecha_mencionada).getDay()]} ${verFecha(interp.fecha_mencionada)}` : (c.vence ? verFecha(c.vence) : null);
+  const habla = /deud|deben|debe|pago|venc/i.test(instr);
+  let texto;
+  if (habla) {
+    const monto = c.deuda != null ? pesos(c.deuda) : null;
+    texto = tono === "formal" ? `Estimado/a ${c.nombre}: le recordamos que tiene un saldo pendiente${monto ? " de " + monto : ""}${fecha ? ", con vencimiento el " + fecha : ""}. Quedamos atentos. Saludos cordiales.`
+      : tono === "breve" ? `${nombre}: saldo pendiente${monto ? " " + monto : ""}${fecha ? ", vence " + fecha : ""}. Gracias.`
+      : `Hola ${nombre}, ¿cómo estás? Te recuerdo que tienes un saldo pendiente${monto ? " de " + monto : ""}${fecha ? " que vence el " + fecha : ""}. ¡Muchas gracias!`;
+  } else {
+    texto = tono === "formal" ? `Estimado/a ${c.nombre}: ${instr.replace(/^(avisa|escríbeles|escribe|dile|diles|recuérdale|recuerdales)\s+(a\s+)?(todos\s+)?(los\s+)?(clientes\s+)?(que\s+)?/i, "")}. Saludos cordiales.`
+      : `Hola ${nombre}, ${instr.replace(/^(avisa|escríbeles|escribe|dile|diles|recuérdale|recuerdales)\s+(a\s+)?(todos\s+)?(los\s+)?(clientes\s+)?(que\s+)?/i, "")}. ¡Saludos!`;
+  }
+  if (canal === "sms" && texto.length > 160) texto = texto.slice(0, 157) + "…";
+  return { id: c.id, asunto: canal === "correo" ? (habla ? "Recordatorio de pago" : "Aviso importante") : null, texto, advertencia: null };
+}
+
+async function generarMensajes() {
+  const instr = $("#instruccion").value.trim();
+  const out = $("#resultado-mensajes");
+  if (!instr) { out.innerHTML = `<div class="aviso advertencia">Escribe primero qué quieres comunicar.</div>`; return; }
+  if (!S.contactos.length) { out.innerHTML = `<div class="aviso advertencia">No tienes contactos cargados. Agrégalos en Conocimiento → Clientes y contactos.</div>`; return; }
+  const canal = UI.canal, tono = UI.tono;
+  const btn = $('[data-action="generar"]'); btn.disabled = true;
+  out.innerHTML = `<div class="panel"><div class="cargando"><span class="spin"></span>Entendiendo la instrucción…</div></div>`;
+  await IA.listo;
+  let interp, usaIA = !!IA.sample, costoChars = 0, salidaChars = 0;
+  try {
+    if (usaIA) {
+      const p1 = promptInterpretar(instr); costoChars += p1.length;
+      try { interp = await IA.sample.json(p1, { modelTier: "default", cache: false }); salidaChars += JSON.stringify(interp).length; }
+      catch (e) { if (["not_granted", "sampling_disabled"].includes(e?.code)) { usaIA = false; interp = interpretarLocal(instr); } else throw e; }
+    } else interp = interpretarLocal(instr);
+    interp.filtros = Array.isArray(interp.filtros) ? interp.filtros.filter((f) => f && f.campo && f.operador) : [];
+    interp.ambiguedades = Array.isArray(interp.ambiguedades) ? interp.ambiguedades.filter(Boolean).map(String) : [];
+    const todos = contactosParaIA();
+    const elegidos = interp.filtros.length ? todos.filter((c) => interp.filtros.every((f) => cumple(c, f))) : todos;
+    const campoCanal = canal === "correo" ? "correo" : "telefono";
+    const sinDato = elegidos.filter((c) => canal === "correo" ? !correoValido(c.correo) : !String(c.telefono || "").replace(/\D/g, "").length);
+    const conDato = elegidos.filter((c) => !sinDato.includes(c));
+    UI.resultado = { instr, canal, tono, interp, usaIA, elegidos: elegidos.length, sinDato: sinDato.map((c) => ({ nombre: c.nombre, motivo: canal === "correo" ? (c.correo ? "correo no válido" : "no tiene correo") : "no tiene teléfono" })), mensajes: [], estado: "redactando" };
+    pintarResultado();
+    if (!conDato.length) { UI.resultado.estado = "listo"; pintarResultado(); return; }
+    if (usaIA) {
+      const lotes = []; for (let i = 0; i < conDato.length; i += 30) lotes.push(conDato.slice(i, i + 30));
+      for (const lote of lotes) {
+        const p2 = promptRedactar(instr, interp, lote, canal, tono); costoChars += p2.length;
+        const resp = await IA.sample.json(p2, { modelTier: "default", cache: false });
+        salidaChars += JSON.stringify(resp).length;
+        const arr = Array.isArray(resp) ? resp : (resp?.mensajes || []);
+        for (const c of lote) {
+          const m = arr.find((x) => String(x?.id) === c.id);
+          UI.resultado.mensajes.push({ id: c.id, nombre: c.nombre, destino: c[campoCanal], asunto: m?.asunto || null, texto: m?.texto ? String(m.texto) : "", advertencia: m ? (m.advertencia || null) : "La IA no escribió un mensaje para este contacto." });
+        }
+        pintarResultado();
+      }
+    } else {
+      for (const c of conDato) { const m = redactarLocal(instr, interp, c, canal, tono); UI.resultado.mensajes.push({ id: c.id, nombre: c.nombre, destino: c[campoCanal], asunto: m.asunto, texto: m.texto, advertencia: null }); }
+    }
+    UI.resultado.costo = usaIA ? costoEstimado(costoChars, 0, salidaChars) : null;
+    UI.resultado.estado = "listo";
+    S.lotes.unshift({ id: nuevoId(), fecha: new Date().toISOString(), instr, canal, tono, mensajes: UI.resultado.mensajes.map(({ nombre, destino, asunto, texto }) => ({ nombre, destino, asunto, texto })) });
+    S.lotes = S.lotes.slice(0, 20); Store.guardar("lotes"); pintarHistorial();
+    pintarResultado();
+  } catch (e) {
+    out.innerHTML = `<div class="aviso error">${esc(errorIA(e))}</div>`;
+  } finally { btn.disabled = false; }
+}
+function pintarResultado() {
+  const R = UI.resultado, out = $("#resultado-mensajes"); if (!R) { out.innerHTML = ""; return; }
+  const chips = R.interp.filtros.length ? R.interp.filtros.map((f) => `<span class="chip filtro">${esc(textoFiltro(f))}</span>`).join("") : `<span class="chip filtro">Todos los contactos</span>`;
+  const limite = R.canal === "sms" ? 160 : null;
+  out.innerHTML = `<div class="panel">
+      <div class="fila" style="justify-content:space-between"><h3>Entendí esto</h3>${R.usaIA ? "" : '<span class="pill warn">Modo básico, sin IA</span>'}</div>
+      <p>${esc(R.interp.proposito || R.instr)}</p>
+      <div class="chips">${chips}${R.interp.fecha_mencionada ? `<span class="chip filtro">Fecha: ${esc(DIAS[parseFecha(R.interp.fecha_mencionada)?.getDay() ?? 0])} ${esc(verFecha(R.interp.fecha_mencionada))}</span>` : ""}</div>
+      ${R.interp.ambiguedades.map((a) => `<div class="aviso advertencia">Duda: ${esc(a)} Si no es lo que quieres, corrige la instrucción y genera de nuevo.</div>`).join("")}
+      <p class="small muted">${R.elegidos} destinatario(s) cumplen el criterio${R.sinDato.length ? `, ${R.sinDato.length} sin dato de contacto` : ""}.</p>
+    </div>
+    ${R.sinDato.length ? `<div class="aviso error"><div><b>No se puede escribir a:</b> ${R.sinDato.map((s) => `${esc(s.nombre)} (${esc(s.motivo)})`).join(", ")}. Completa sus datos en Conocimiento → Clientes y contactos.</div></div>` : ""}
+    ${R.elegidos === 0 ? `<div class="aviso advertencia">Ningún contacto cumple con lo pedido. Revisa la instrucción o los datos de tus clientes.</div>` : ""}
+    ${R.mensajes.length ? `<div class="fila" style="justify-content:space-between"><h3>${R.mensajes.length} mensaje(s) por ${{ whatsapp: "WhatsApp", correo: "correo", sms: "SMS" }[R.canal]}</h3>
+      <div class="fila"><button class="btn" data-action="copiar-todos">Copiar todos</button><button class="btn" disabled title="Disponible en una próxima versión">Enviar (próximamente)</button></div></div>
+      ${R.costo ? `<p class="small muted mono">Costo estimado del lote con la API: ${R.costo.texto}. En este prototipo se usa tu plan de Claude.</p>` : ""}
+      ${R.mensajes.map((m, i) => `<div class="msj"><div class="msj-cab"><b>${esc(m.nombre)}</b><span class="small muted mono">${esc(m.destino || "")}</span></div>
+        ${R.canal === "correo" ? `<label class="campo"><span>Asunto</span><input data-msj="${i}" data-campo="asunto" value="${esc(m.asunto || "")}"></label>` : ""}
+        <textarea data-msj="${i}" data-campo="texto" aria-label="Mensaje para ${esc(m.nombre)}">${esc(m.texto)}</textarea>
+        ${m.advertencia ? `<div class="aviso advertencia">${esc(m.advertencia)}</div>` : ""}
+        <div class="fila" style="justify-content:space-between"><span class="contador ${limite && m.texto.length > limite ? "excede" : ""}" id="cont-${i}">${m.texto.length}${limite ? " / " + limite : ""} caracteres</span>
+          <button class="btn chico" data-action="copiar-uno" data-i="${i}">Copiar</button></div></div>`).join("")}` : ""}
+    ${R.estado === "redactando" ? `<div class="panel"><div class="cargando"><span class="spin"></span>Escribiendo los mensajes…</div></div>` : ""}`;
+}
+function pintarHistorial() {
+  $("#lista-historial").innerHTML = !S.lotes.length ? `<p class="small muted">Aún no has generado mensajes.</p>` : S.lotes.map((l) => `<div class="nota-item">
+    <div class="fila" style="justify-content:space-between"><b>${esc(l.instr)}</b><span class="small muted">${esc(new Date(l.fecha).toLocaleString("es-CL"))}</span></div>
+    <span class="small muted">${l.mensajes.length} mensaje(s) · ${esc(l.canal)} · ${esc(l.tono)}</span>
+    <div><button class="btn chico" data-action="lote-copiar" data-id="${l.id}">Copiar todos</button> <button class="btn texto chico" data-action="lote-borrar" data-id="${l.id}">Borrar</button></div></div>`).join("");
+}
+const textoMensaje = (m, canal) => canal === "correo" && m.asunto ? `Para: ${m.nombre}${m.destino ? " <" + m.destino + ">" : ""}\nAsunto: ${m.asunto}\n\n${m.texto}` : `Para: ${m.nombre}${m.destino ? " (" + m.destino + ")" : ""}\n${m.texto}`;
+
+/* ============================================================
+   Banner, estado, navegación y eventos
+   ============================================================ */
+function pintarBanner() {
+  $("#banner").innerHTML = S.ejemplo ? `<div class="banner-ejemplo"><span>Estás viendo <b>datos de ejemplo</b> (clientes, notas y 3 documentos) para que pruebes todo. Se guardan como tuyos apenas cambies algo.</span>
+    <button class="btn chico" data-action="vaciar">Empezar vacío</button></div>` : "";
+}
+function pintarEstado() {
+  const ia = $("#estado-ia"), d = $("#estado-datos"), e = estadoIA();
+  ia.className = "pill " + (e === "ok" ? "ok" : "warn");
+  ia.textContent = e === "ok" ? "IA: tu cuenta de Claude" : e === "texto" ? "IA: solo texto en esta vista" : "IA: no disponible aquí";
+  d.className = "pill " + (Store.modo === "db" ? "ok" : "");
+  d.textContent = Store.modo === "db" ? "Datos: guardados en tu cuenta" : Store.modo === "local" ? "Datos: en este navegador" : "Datos: sin guardar";
+}
+function pintarTodo() { pintarBanner(); pintarPendientes(); pintarGuardados(); pintarColumnas(); pintarTablaDocumentos(); pintarNotas(); pintarArchivos(); pintarContactos(); pintarHistorial(); pintarResultado(); pintarEstado(); }
+function irTab(t) {
+  UI.tab = t;
+  $$("nav.tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === t));
+  $$("section.tab").forEach((s) => (s.hidden = s.id !== t));
+  try { history.replaceState(null, "", "#" + t); } catch { /* sin historial */ }
+  window.scrollTo({ top: 0 });
+}
+function irSub(s) {
+  UI.sub = s;
+  $$("#sub-conocimiento button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.sub === s));
+  ["contactos", "notas", "archivos"].forEach((k) => ($("#k-" + k).hidden = k !== s));
+}
+function pendiente(uid) { return UI.pendientes.find((p) => p.uid === uid); }
+
+document.addEventListener("click", async (ev) => {
+  const t = ev.target.closest("button, [data-tab-ir]"); if (!t) return;
+  if (t.dataset.tab) return irTab(t.dataset.tab);
+  if (t.dataset.tabIr) return irTab(t.dataset.tabIr);
+  if (t.closest("#tipo-escaneo")) { UI.tipoEscaneo = t.dataset.tipo; $$("#tipo-escaneo button").forEach((b) => b.setAttribute("aria-pressed", b === t)); return; }
+  if (t.closest("#tipo-columnas")) { UI.tipoCol = t.dataset.tipo; return pintarColumnas(); }
+  if (t.closest("#sub-conocimiento")) return irSub(t.dataset.sub);
+  if (t.closest("#canal")) { UI.canal = t.dataset.v; $$("#canal button").forEach((b) => b.setAttribute("aria-pressed", b === t)); return; }
+  if (t.closest("#tono")) { UI.tono = t.dataset.v; $$("#tono button").forEach((b) => b.setAttribute("aria-pressed", b === t)); return; }
+  if (t.dataset.ej) { $("#instruccion").value = t.dataset.ej; return; }
+  const a = t.dataset.action; if (!a) return;
+  const p = t.dataset.uid ? pendiente(t.dataset.uid) : null;
+  switch (a) {
+    case "probar-ejemplos": return escanearArchivos(await archivosEjemplo());
+    case "descartar": UI.pendientes = UI.pendientes.filter((x) => x.uid !== t.dataset.uid); return pintarPendientes();
+    case "guardar": return p && guardarPendiente(p);
+    case "dt-tipo": p.datos.dt.tipo = t.dataset.v; return pintarPendientes();
+    case "linea-agregar": p.datos.dt.lineas.push({ descripcion: null, cantidad: null, precio_unitario: null, total: null }); return pintarPendientes();
+    case "linea-quitar": p.datos.dt.lineas.splice(+t.dataset.i, 1); p.datos.dt.dudosos = []; return pintarPendientes();
+    case "item-agregar": p.datos.li.items.push({ texto: null, cantidad: null, marcado: false }); return pintarPendientes();
+    case "item-quitar": p.datos.li.items.splice(+t.dataset.i, 1); p.datos.li.dudosos = p.datos.li.dudosos.filter((d) => !d.startsWith("items[")); return pintarPendientes();
+    case "campo-agregar": p.datos.fo.campos.push({ etiqueta: "", valor: null }); return pintarPendientes();
+    case "campo-quitar": p.datos.fo.campos.splice(+t.dataset.i, 1); p.datos.fo.dudosos = p.datos.fo.dudosos.filter((d) => !d.startsWith("campos[")); return pintarPendientes();
+    case "excel-nuevo": return excelNuevo();
+    case "col-agregar": {
+      const nombre = $("#col-nombre").value.trim(); if (!nombre) { $("#col-nombre").focus(); return; }
+      let clave = normTexto(nombre).slice(0, 30) || "campo"; const cols = S.columnas[UI.tipoCol]; while (cols.some((c) => c.clave === clave)) clave += "_2";
+      cols.push({ clave, nombre, desc: $("#col-desc").value.trim(), activa: true, base: false });
+      $("#col-nombre").value = ""; $("#col-desc").value = ""; Store.guardar("columnas"); pintarColumnas(); toast("Columna agregada"); return;
+    }
+    case "col-quitar": S.columnas[UI.tipoCol].splice(+t.dataset.i, 1); Store.guardar("columnas"); return pintarColumnas();
+    case "col-subir": { const c = S.columnas[UI.tipoCol], i = +t.dataset.i; [c[i - 1], c[i]] = [c[i], c[i - 1]]; Store.guardar("columnas"); return pintarColumnas(); }
+    case "doc-borrar": S.documentos = S.documentos.filter((d) => d.id !== t.dataset.id); Store.guardar("documentos"); pintarTablaDocumentos(); return pintarGuardados();
+    case "nota-agregar": { const v = $("#nota-nueva").value.trim(); if (!v) return; S.notas.push({ id: nuevoId(), texto: v }); $("#nota-nueva").value = ""; Store.guardar("notas"); pintarNotas(); return toast("Nota guardada"); }
+    case "nota-borrar": S.notas = S.notas.filter((n) => n.id !== t.dataset.id); Store.guardar("notas"); return pintarNotas();
+    case "archivo-borrar": S.archivos = S.archivos.filter((n) => n.id !== t.dataset.id); Store.guardar("archivos"); return pintarArchivos();
+    case "contacto-agregar": S.contactos.unshift({ id: nuevoId(), nombre: "", telefono: "", correo: "", deuda: null, vence: null, extra: {} }); Store.guardar("contactos"); pintarContactos(); $("#tabla-contactos input")?.focus(); return;
+    case "contacto-borrar": S.contactos = S.contactos.filter((c) => c.id !== t.dataset.id); Store.guardar("contactos"); return pintarContactos();
+    case "mapeo-cancelar": UI.mapeo = null; return pintarMapeo();
+    case "mapeo-importar": {
+      const M = UI.mapeo; const nuevos = M.filas.map((f) => contactoDesdeFila(f, M)).filter((c) => c.nombre);
+      S.contactos = $("#mapeo-reemplazar").checked ? nuevos : [...S.contactos, ...nuevos];
+      UI.mapeo = null; Store.guardar("contactos"); pintarMapeo(); pintarContactos(); return toast(`${nuevos.length} contactos importados`);
+    }
+    case "generar": return generarMensajes();
+    case "copiar-uno": { const R = UI.resultado, m = R.mensajes[+t.dataset.i]; return copiar(R.canal === "correo" && m.asunto ? `Asunto: ${m.asunto}\n\n${m.texto}` : m.texto, $(`textarea[data-msj="${t.dataset.i}"]`)); }
+    case "copiar-todos": { const R = UI.resultado; return copiar(R.mensajes.map((m) => textoMensaje(m, R.canal)).join("\n\n———\n\n")); }
+    case "lote-copiar": { const l = S.lotes.find((x) => x.id === t.dataset.id); return l && copiar(l.mensajes.map((m) => textoMensaje(m, l.canal)).join("\n\n———\n\n")); }
+    case "lote-borrar": S.lotes = S.lotes.filter((x) => x.id !== t.dataset.id); Store.guardar("lotes"); return pintarHistorial();
+    case "vaciar": S = { ejemplo: false, documentos: [], notas: [], archivos: [], contactos: [], columnas: columnasIniciales(), lotes: [] }; Store.guardar(...CLAVES); UI.resultado = null; pintarTodo(); return toast("Listo, partes desde cero");
+  }
+});
+document.addEventListener("input", (ev) => {
+  const el = ev.target;
+  if (el.dataset.uid && el.dataset.ruta) { const p = pendiente(el.dataset.uid); if (!p) return; asignarRuta(p.datos, el.dataset.ruta, valorDesdeInput(el)); return refrescarAvisos(p); }
+  if (el.dataset.forzar) { const p = pendiente(el.dataset.forzar); p.forzar = el.checked; return refrescarAvisos(p); }
+  if (el.dataset.col !== undefined && el.dataset.campo) { const c = S.columnas[UI.tipoCol][+el.dataset.col]; c[el.dataset.campo] = el.type === "checkbox" ? el.checked : el.value; return Store.guardar("columnas"); }
+  if (el.dataset.nota) { const n = S.notas.find((x) => x.id === el.dataset.nota); if (n) { n.texto = el.value; Store.guardar("notas"); } return; }
+  if (el.dataset.contacto) {
+    const c = S.contactos.find((x) => x.id === el.dataset.contacto); if (!c) return;
+    const k = el.dataset.campo, v = el.value;
+    c[k] = k === "deuda" ? parseMonto(v) : k === "vence" ? (parseFecha(v) ? isoFecha(parseFecha(v)) : (v.trim() || null)) : v.trim();
+    el.closest("td").classList.toggle("dudoso", (k === "telefono" || k === "correo") && !v.trim());
+    return Store.guardar("contactos");
+  }
+  if (el.dataset.mapa) { UI.mapeo.mapa[el.dataset.mapa] = +el.value; return pintarMapeo(); }
+  if (el.dataset.msj !== undefined) {
+    const R = UI.resultado, m = R.mensajes[+el.dataset.msj]; m[el.dataset.campo] = el.value;
+    const ct = $("#cont-" + el.dataset.msj); if (ct && el.dataset.campo === "texto") { const lim = R.canal === "sms" ? 160 : null; ct.textContent = `${el.value.length}${lim ? " / " + lim : ""} caracteres`; ct.classList.toggle("excede", !!lim && el.value.length > lim); }
+    const lote = S.lotes[0]; if (lote && lote.instr === R.instr && lote.mensajes[+el.dataset.msj]) { lote.mensajes[+el.dataset.msj][el.dataset.campo] = el.value; Store.guardar("lotes"); }
+  }
+});
+document.addEventListener("change", (ev) => {
+  const el = ev.target;
+  if (el.dataset.uid && el.dataset.ruta && el.dataset.tipo === "monto") { el.value = pesos(parseMonto(el.value)); }
+  if (el.dataset.contacto && el.dataset.campo === "deuda") el.value = pesos(parseMonto(el.value));
+  if (el.dataset.contacto && el.dataset.campo === "telefono") { const c = S.contactos.find((x) => x.id === el.dataset.contacto); c.telefono = normTelefono(el.value); el.value = c.telefono; Store.guardar("contactos"); }
+  if (el.id === "archivos-escaneo" && el.files.length) { escanearArchivos([...el.files]); el.value = ""; }
+  if (el.id === "excel-existente" && el.files[0]) { excelExistente(el.files[0]); el.value = ""; }
+  if (el.id === "archivo-conocimiento" && el.files.length) { subirConocimiento([...el.files]); el.value = ""; }
+  if (el.id === "archivo-contactos" && el.files[0]) { importarContactos(el.files[0]); el.value = ""; }
+});
+const zona = $("#zona-subida");
+zona.addEventListener("dragover", (e) => { e.preventDefault(); zona.classList.add("encima"); });
+zona.addEventListener("dragleave", () => zona.classList.remove("encima"));
+zona.addEventListener("drop", (e) => { e.preventDefault(); zona.classList.remove("encima"); if (e.dataTransfer.files.length) escanearArchivos([...e.dataTransfer.files]); });
+
+/* ---------- Fotos de ejemplo (incluidas en la página) ---------- */
+const FOTOS_EJEMPLO = { boleta: "__FOTO_BOLETA__", factura: "__FOTO_FACTURA__", lista: "__FOTO_LISTA__" };
+const RESPUESTAS_EJEMPLO = __RESPUESTAS__;
+async function archivosEjemplo() {
+  const nombres = { boleta: "boleta_minimarket.jpg", factura: "factura_con_error.jpg", lista: "lista_feria_a_mano.jpg" };
+  const out = [];
+  for (const [k, url] of Object.entries(FOTOS_EJEMPLO)) {
+    const bin = atob(url.split(",")[1]); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const f = new File([bytes], nombres[k], { type: "image/jpeg" }); f._ejemplo = k; out.push(f);
+  }
+  return out;
+}
+
+/* ---------- Inicio ---------- */
+irSub("contactos");
+const inicial = (location.hash || "").slice(1);
+if (["escanear", "excel", "conocimiento", "mensajes"].includes(inicial)) irTab(inicial);
+pintarTodo();
+Promise.all([Store.iniciar(), IA.listo]).then(() => pintarTodo());
+</script>
