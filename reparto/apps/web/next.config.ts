@@ -2,10 +2,10 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs/config";
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
-  partialPrefetching: true,
   // Los paquetes del monorepo se publican como TypeScript y Next los compila.
   transpilePackages: ["@reparto/dominio", "@reparto/ui-tokens"],
+  // Los textos legales viven en reparto/docs/legal y se leen al compilar.
+  outputFileTracingIncludes: { "/legal/[documento]": ["../../docs/legal/*.md"] },
 };
 
 // Los mapas de código para Sentry solo se suben si hay credenciales (en la CI de producción).
