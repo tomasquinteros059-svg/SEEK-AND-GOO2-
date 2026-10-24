@@ -1,0 +1,57 @@
+# Reparto · arma la app de prueba en los servidores de Expo (EAS), para
+# instalarla en Android y iPhone. Se lanza a mano desde GitHub → Actions.
+#
+# Usa --no-wait: GitHub solo encarga el trabajo (menos de 2 minutos) y Expo
+# compila. El enlace para instalar aparece en expo.dev → Builds.
+name: Reparto · app de prueba
+
+on:
+  workflow_dispatch:
+    inputs:
+      plataforma:
+        description: "Para qué teléfonos"
+        type: choice
+        options: [all, android, ios]
+        default: all
+      tipo:
+        description: "preview = app de prueba instalable · development = versión para programar"
+        type: choice
+        options: [preview, development]
+        default: preview
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: reparto/apps/movil
+
+jobs:
+  armar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
+      EXPO_OWNER: ${{ vars.EXPO_OWNER }}
+      APP_NOMBRE: ${{ vars.APP_NOMBRE }}
+      APP_ID: ${{ vars.APP_ID }}
+    steps:
+      - name: Revisar que esté lo necesario
+        run: |
+          falta=""
+          [ -z "$EXPO_TOKEN" ] && falta="$falta secreto EXPO_TOKEN;"
+          [ -z "$EAS_PROJECT_ID" ] && falta="$falta variable EAS_PROJECT_ID;"
+          [ -z "$EXPO_OWNER" ] && falta="$falta variable EXPO_OWNER;"
+          if [ -n "$falta" ]; then echo "::error::Falta:$falta ver reparto/docs/fase-0.md"; exit 1; fi
+        working-directory: .
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: reparto/.nvmrc
+          cache: npm
+          cache-dependency-path: reparto/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: reparto
+      - name: Encargar la compilación a Expo
+        run: npx eas-cli@25.3.0 build --profile "${{ inputs.tipo }}" --platform "${{ inputs.plataforma }}" --non-interactive --no-wait

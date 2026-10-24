@@ -1,0 +1,69 @@
+@import "@fontsource/atkinson-hyperlegible/400.css";
+@import "@fontsource/atkinson-hyperlegible/700.css";
+@import "@fontsource/archivo/700.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+/* Los colores llegan como variables desde `tema.ts` (paquete ui-tokens). */
+:root {
+  --fuente-texto: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --fuente-titulo: "Archivo", system-ui, sans-serif;
+  --fuente-cifras: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  background: var(--fondo);
+  color: var(--tinta);
+  font-family: var(--fuente-texto);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+h1, h2, h3 { font-family: var(--fuente-titulo); line-height: 1.2; margin: 0; }
+
+.cifra { font-family: var(--fuente-cifras); }
+
+.contenedor { max-width: 960px; margin: 0 auto; padding: 24px 16px; display: grid; gap: 16px; }
+
+.cabecera {
+  background: var(--marca);
+  color: var(--marca-tinta);
+  border-radius: 20px;
+  padding: 24px;
+  display: grid;
+  gap: 4px;
+}
+
+.tarjetas { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.apagado { color: var(--apagado); margin: 0; }
+
+.chip { display: inline-block; border-radius: 999px; padding: 4px 12px; font-weight: 700; margin-right: 8px; }
+.chip.ok { color: var(--ok); background: var(--ok-fondo); }
+.chip.atraso { color: var(--atraso); background: var(--atraso-fondo); }
+
+.boton {
+  min-height: 48px;
+  min-width: 48px;
+  border: 0;
+  border-radius: 12px;
+  padding: 0 20px;
+  background: var(--acento);
+  color: var(--acento-tinta);
+  font: 700 1.0625rem var(--fuente-texto);
+  cursor: pointer;
+}
+.boton:disabled { opacity: 0.5; cursor: default; }

@@ -1,0 +1,2 @@
+-- Datos de desarrollo. Las empresas y personas ficticias del "día de Matías"
+-- (docs/01-caso-real.md) se cargan a partir de la Fase 1.

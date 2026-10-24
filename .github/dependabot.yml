@@ -1,0 +1,16 @@
+# Revisión semanal de librerías con vulnerabilidades conocidas (SPEC 9).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /reparto
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      expo:
+        patterns: ["expo", "expo-*", "@expo/*", "react-native", "react-native-*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

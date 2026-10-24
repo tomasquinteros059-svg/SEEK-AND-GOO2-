@@ -1,0 +1,22 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+# Expo
+apps/movil/.expo/
+apps/movil/dist/
+apps/movil/android/
+apps/movil/ios/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+# Next.js
+apps/web/.next/
+apps/web/out/
+apps/web/next-env.d.ts
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+coverage/

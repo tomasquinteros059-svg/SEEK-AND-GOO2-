@@ -1,0 +1,26 @@
+{
+  "name": "reparto",
+  "private": true,
+  "description": "Reparto: app de reparto de paquetes (conductor, receptor y panel del administrador).",
+  "workspaces": [
+    "apps/*",
+    "paquetes/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "tipos": "npm run tipos --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "verificar": "npm run tipos && npm run lint && npm test",
+    "db:iniciar": "supabase start",
+    "db:probar": "supabase test db",
+    "web": "npm run dev --workspace web",
+    "movil": "npm run start --workspace movil"
+  },
+  "devDependencies": {
+    "supabase": "2.122.0",
+    "typescript": "~6.0.3"
+  }
+}

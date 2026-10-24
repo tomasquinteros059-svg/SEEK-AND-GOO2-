@@ -1,0 +1,20 @@
+{
+  "name": "@reparto/ui-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Colores, tipografías y medidas compartidas por la app y el panel (SPEC, sección 8).",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "tipos": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "vitest": "5.0.5"
+  }
+}

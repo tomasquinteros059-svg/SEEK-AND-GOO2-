@@ -1,0 +1,80 @@
+# Reparto · revisión automática (SPEC 11): corre en cada cambio dentro de reparto/.
+# Ninguna fase se cierra con esto en rojo.
+name: Reparto · revisión
+
+on:
+  push:
+    paths: ["reparto/**", ".github/workflows/reparto.yml"]
+  pull_request:
+    paths: ["reparto/**", ".github/workflows/reparto.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: reparto-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: reparto
+
+jobs:
+  codigo:
+    name: Tipos, estilo, pruebas y compilación
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: reparto/.nvmrc
+          cache: npm
+          cache-dependency-path: reparto/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Ninguna librería no oficial de WhatsApp (docs/agentes-y-whatsapp.md, 9.1)
+        run: |
+          if grep -qiE '"node_modules/(@whiskeysockets/)?baileys"|"node_modules/whatsapp-web\.js"|"node_modules/venom-bot"|"node_modules/@wppconnect' package-lock.json; then
+            echo "::error::Hay una librería no oficial de WhatsApp. Solo se permite la API oficial de Meta."; exit 1
+          fi
+      - run: npm run tipos
+      - run: npm run lint
+      - run: npm test
+      - name: Compilar el panel web
+        run: npm run build --workspace web
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      - name: Empaquetar la app (Android e iPhone)
+        run: npm run exportar --workspace movil
+        env:
+          EXPO_OFFLINE: "1"
+          CI: "1"
+
+  base-de-datos:
+    name: Base de datos (migraciones y pruebas pgTAP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.0
+      - run: supabase db start
+      - run: supabase test db
+
+  claves:
+    name: Ninguna clave subida por error (SPEC 9)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Buscar claves con gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.28.0 \
+            detect --source=/repo --no-banner --redact --log-opts="-- reparto"
