@@ -4,7 +4,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from core import documentos, revision, ui
+from core import conocimiento, documentos, excel, revision, ui
 from core.escaneo import TIPOS, ResultadoArchivo, escanear
 from core.imagenes import EXTENSIONES, ErrorArchivo, preparar
 from core.validacion import (Aviso, buscar_duplicado, normalizar_numero, normalizar_texto,
@@ -42,7 +42,7 @@ if enviar:
             except ErrorArchivo as e:
                 st.error(str(e))
                 continue
-            res = escanear(ia, conn, prep, tipo)
+            res = escanear(ia, conn, prep, tipo, conocimiento.contexto_negocio(conn, max_caracteres=4000))
             if res.uso and not ui.config().modo_demo:   # en modo demo no hay gasto real
                 documentos.registrar_uso(conn, "escaneo", res.uso)
                 costo_lote += res.uso.costo_usd
@@ -152,7 +152,8 @@ def tarjeta(uid: int, res: ResultadoArchivo) -> None:
                     st.error(f"No se pudo guardar: {e}")
                 else:
                     quitar(uid)
-                    st.toast(f"Guardado como documento #{doc_id}", icon="💾")
+                    aviso = excel.actualizar_archivo_local(conn, ui.config().datos_dir / "documentos.xlsx")
+                    st.toast(aviso or f"Guardado como documento #{doc_id}", icon="⚠️" if aviso else "💾")
                     st.rerun()
             b2.button("🗑️ Descartar", key=f"descartar{uid}", on_click=quitar, args=(uid,), width="stretch")
 

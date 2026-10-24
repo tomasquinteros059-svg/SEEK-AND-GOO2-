@@ -92,3 +92,56 @@ def clave_desde_nombre(nombre: str) -> str:
     texto = unicodedata.normalize("NFKD", nombre).encode("ascii", "ignore").decode()
     texto = re.sub(r"[^a-zA-Z0-9]+", "_", texto).strip("_").lower()
     return texto or "campo"
+
+
+def agregar(conn: sqlite3.Connection, tipo: str, nombre: str, descripcion: str = "") -> Columna:
+    """Agrega una columna nueva (la IA la llenará en los próximos escaneos)."""
+    nombre = nombre.strip()
+    if not nombre:
+        raise ValueError("La columna necesita un nombre.")
+    if tipo not in TIPOS_DOCUMENTO:
+        raise ValueError("Tipo de documento desconocido.")
+    existentes = {c.clave for c in listar(conn, tipo)}
+    nombres = {c.nombre_visible.lower() for c in listar(conn, tipo)}
+    if nombre.lower() in nombres:
+        raise ValueError(f"Ya existe una columna «{nombre}».")
+    base = clave_desde_nombre(nombre)[:40]
+    clave, n = base, 2
+    while clave in existentes:
+        clave, n = f"{base}_{n}", n + 1
+    orden = (conn.execute("SELECT COALESCE(MAX(orden), 0) FROM columnas WHERE tipo_documento = ?", (tipo,)).fetchone()[0]) + 1
+    conn.execute(
+        "INSERT INTO columnas (tipo_documento, clave, nombre_visible, descripcion, orden, activa, es_base) VALUES (?,?,?,?,?,1,0)",
+        (tipo, clave, nombre, descripcion.strip(), orden),
+    )
+    conn.commit()
+    return next(c for c in listar(conn, tipo) if c.clave == clave)
+
+
+def actualizar(conn: sqlite3.Connection, col_id: int, *, nombre_visible: str | None = None,
+               descripcion: str | None = None, activa: bool | None = None, orden: int | None = None) -> None:
+    campos, valores = [], []
+    if nombre_visible is not None:
+        if not nombre_visible.strip():
+            raise ValueError("El nombre de la columna no puede quedar vacío.")
+        campos.append("nombre_visible = ?"); valores.append(nombre_visible.strip())
+    if descripcion is not None:
+        campos.append("descripcion = ?"); valores.append(descripcion.strip())
+    if activa is not None:
+        campos.append("activa = ?"); valores.append(1 if activa else 0)
+    if orden is not None:
+        campos.append("orden = ?"); valores.append(int(orden))
+    if campos:
+        conn.execute(f"UPDATE columnas SET {', '.join(campos)} WHERE id = ?", (*valores, col_id))
+        conn.commit()
+
+
+def borrar(conn: sqlite3.Connection, col_id: int) -> None:
+    """Borra una columna agregada por el usuario. Las columnas base solo se pueden ocultar."""
+    fila = conn.execute("SELECT es_base FROM columnas WHERE id = ?", (col_id,)).fetchone()
+    if fila is None:
+        return
+    if fila["es_base"]:
+        raise ValueError("Las columnas base no se borran; puedes ocultarlas.")
+    conn.execute("DELETE FROM columnas WHERE id = ?", (col_id,))
+    conn.commit()

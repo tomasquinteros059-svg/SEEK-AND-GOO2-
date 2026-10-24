@@ -71,3 +71,28 @@ def listar(conn: sqlite3.Connection, limite: int = 50) -> list[sqlite3.Row]:
 def borrar(conn: sqlite3.Connection, doc_id: int) -> None:
     conn.execute("DELETE FROM documentos WHERE id = ?", (doc_id,))
     conn.commit()
+
+
+def obtener_todos(conn: sqlite3.Connection) -> list[dict]:
+    """Todos los documentos con sus líneas y datos extra, del más antiguo al más nuevo."""
+    docs = []
+    lineas: dict[int, list[dict]] = {}
+    for l in conn.execute("SELECT * FROM lineas_documento ORDER BY id"):
+        lineas.setdefault(l["documento_id"], []).append(
+            {"descripcion": l["descripcion"], "cantidad": l["cantidad"], "precio_unitario": l["precio_unitario"], "total": l["total"]})
+    for f in conn.execute("SELECT * FROM documentos ORDER BY id"):
+        d = dict(f)
+        datos = json.loads(d.pop("datos_json") or "{}")
+        d["campos_dudosos"] = json.loads(d.pop("campos_dudosos_json") or "[]")
+        if d["tipo"] in ("boleta", "factura"):
+            d["extras"] = datos.get("extras", {})
+            d["observaciones"] = datos.get("observaciones")
+            d["lineas"] = lineas.get(d["id"], [])
+        else:
+            d["extras"] = {e["clave"]: e["valor"] for e in datos.get("campos_extra", [])}
+            d["titulo"] = datos.get("titulo")
+            d["items"] = datos.get("items", [])
+            d["campos"] = datos.get("campos", [])
+            d["observaciones"] = datos.get("observaciones")
+        docs.append(d)
+    return docs

@@ -2,10 +2,13 @@
 
 Programa local, para un solo usuario, que:
 
-1. **Escanea fotos** de boletas, facturas, listas y formularios y extrae sus datos con IA (Claude). ✅
-2. **Guarda los datos en Excel** con formato chileno. *(en construcción)*
-3. **Aprende de tu negocio**: notas, documentos y listas de clientes. *(en construcción)*
-4. **Redacta mensajes** de WhatsApp, correo o SMS a partir de una instrucción simple. *(en construcción)*
+1. **Escanea fotos** de boletas, facturas, listas y formularios y extrae sus datos con IA (Claude).
+2. **Guarda los datos en Excel** con formato chileno.
+3. **Aprende de tu negocio**: notas, documentos y listas de clientes.
+4. **Redacta mensajes** de WhatsApp, correo o SMS a partir de una instrucción simple (no envía nada).
+
+También hay un **prototipo web** de una sola página en [`prototipo/`](prototipo/) que se abre en claude.ai y usa
+tu propia cuenta de Claude (sin clave de API).
 
 La propuesta técnica completa está en [`docs/PLAN.md`](docs/PLAN.md).
 
@@ -55,16 +58,49 @@ Se abre el navegador en `http://localhost:8501`.
 
 La IA nunca rellena datos que no se ven: si algo no se lee, queda vacío y marcado para revisar.
 
+### Excel
+
+- **Descargar Excel**: crea un archivo con las hojas «Boletas y Facturas», «Detalle», «Listas», «Formularios»
+  y «Resumen» (totales por mes y por proveedor).
+- **Agregar a un Excel existente**: sube tu archivo; se agregan solo los documentos que no estaban.
+- **Columnas**: renombra, oculta, ordena o agrega columnas. Para una columna nueva escribe qué debe buscar
+  la IA (ej. «Forma de pago: efectivo, débito o crédito»); se llenará en los próximos escaneos.
+- Cada vez que guardas un documento se actualiza `datos/documentos.xlsx` (si lo tienes abierto en Excel,
+  ciérralo para que se pueda actualizar).
+- Los montos usan el formato `$#,##0`: Excel configurado en español de Chile los muestra como $12.345.
+
+### Base de conocimiento
+
+- **Clientes y contactos**: importa tu lista desde Excel o CSV (puedes elegir qué columna es el nombre,
+  teléfono, correo, deuda y vencimiento) o agrégalos a mano. Los teléfonos se dejan como +56 9 1234 5678.
+  Lo que falta (sin teléfono, sin correo) queda marcado en amarillo. Hay un ejemplo en
+  `ejemplos/contactos_ejemplo.xlsx`.
+- **Notas**: cosas que el asistente debe saber («Juan Pérez paga siempre los días 5»).
+- **Documentos**: sube PDF, Word, Excel o TXT con información del negocio (precios, horarios, datos de pago).
+
+### Crear mensajes
+
+1. Escribe la instrucción, por ejemplo: «Escríbeles a los clientes que deben más de $50.000 que el pago vence el viernes».
+2. Elige el canal (WhatsApp, correo o SMS) y el tono (formal, cercano o breve).
+3. El asistente muestra cómo entendió la instrucción (ej. «Deuda mayor a $50.000 · Fecha: viernes 30 de octubre»).
+   Si algo no está claro, lo pregunta antes de escribir.
+4. Escribe un mensaje por cliente con sus datos reales. Los clientes sin teléfono o correo aparecen aparte.
+5. Revisa, edita y copia cada mensaje (o todos juntos). Quedan en el historial.
+
+**No se envía nada automáticamente.** La estructura para conectar el envío está en `core/envio/`.
+
 ### Probar sin clave de API (modo demostración)
 
 Pon `MODO_DEMO=1` en `.env` y escanea las fotos de la carpeta `ejemplos/`. Las respuestas son
 simuladas (no se gasta dinero). Incluye una boleta, una factura correcta, una factura con error de
-suma, una lista escrita a mano, un formulario y una foto borrosa.
+suma, una lista escrita a mano, un formulario y una foto borrosa. Para probar los mensajes, importa
+`ejemplos/contactos_ejemplo.xlsx` en «Conocimiento»; en modo demostración los mensajes se arman con
+plantillas simples.
 
 ## Costos
 
-Cada escaneo muestra su costo aproximado en dólares y en pesos. Con Claude Opus 5.5 una foto cuesta
-unos **US$0,02–0,06** (≈ $20–60 CLP). El gasto del día y el total aparecen en la barra lateral.
+Cada escaneo y cada lote de mensajes muestra su costo aproximado en dólares y en pesos. Con Claude
+Opus 5.5 una foto cuesta unos **US$0,02–0,06** (≈ $20–60 CLP) y un lote de 20 mensajes unos US$0,03–0,08. El gasto del día y el total aparecen en la barra lateral.
 El tipo de cambio se ajusta con `DOLAR_CLP` en `.env`.
 
 ## Errores comunes
@@ -89,9 +125,11 @@ Los tests usan respuestas de IA simuladas: no necesitan clave ni gastan dinero.
 
 ```
 Inicio.py              Página de inicio (streamlit run Inicio.py)
-pages/1_Escanear.py    Escanear, revisar y guardar
-core/                  Lógica (IA, esquemas, validación, base de datos…)
-ejemplos/              Fotos de prueba y sus respuestas simuladas
+pages/                 Escanear · Excel · Conocimiento · Mensajes
+core/                  Lógica (IA, esquemas, validación, Excel, conocimiento, mensajes, base de datos)
+core/envio/            Interfaz para conectar el envío de mensajes más adelante
+ejemplos/              Fotos de prueba, respuestas simuladas y contactos de ejemplo
+prototipo/             Prototipo web de una sola página (para claude.ai)
 tests/                 Tests automáticos
 datos/                 Base de datos y Excel (se crea sola, no se sube a git)
 ```
