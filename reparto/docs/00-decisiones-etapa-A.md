@@ -76,3 +76,10 @@ Pedido del cliente. El diseño completo está en `agentes-y-whatsapp.md` y **esp
 
 **Se mantiene sin cambios:** los estados de entrega, el stack (Supabase, Expo, Next.js, OSRM y VROOM), la regla de que ninguna persona ve el teléfono de otra, y que las decisiones sobre conductores (asignar, suspender, pagar) las toma una persona.
 
+### Respuestas del cliente al diseño (24-oct-2026)
+- **El «recepcionista» es el cliente que recibe el pedido.** Las entregas son a empresas clientes (por ejemplo, un local de Jumbo), no a edificios. Cada cliente tiene uno o más contactos de recepción.
+- **El Agente WhatsApp se conecta al WhatsApp de cada empresa** (un número por empresa, con Embedded Signup).
+- **El mensaje al entregar es obligatorio.** Pasa de la app al administrador, y desde el administrador (el agente) se envía al cliente. En el modo «Propone» el administrador lo aprueba; en «Responde solo» sale directo.
+- **La verificación del negocio en Meta la hace el cliente.**
+- Pendiente para la Fase 7-W: cuántos WhatsApp por entrega.
+

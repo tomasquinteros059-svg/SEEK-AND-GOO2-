@@ -10,8 +10,30 @@ Propuesta para aprobar **antes** de programar. Manda `00-decisiones-etapa-A.md`;
 - **Solo tres agentes usan IA.** Entregas usa Haiku 5.5 (mira la foto y clasifica), Central usa Sonnet 5.5 (entiende órdenes y usa herramientas) y WhatsApp usa Haiku 5.5 (clasifica lo que llega y redacta). Rutas usa VROOM y OSRM, y Llamadas usa un guion fijo. Así cuestan menos y siempre se comportan igual.
 - **WhatsApp se reutiliza casi entero de Cotigestión:** el webhook, la firma, los duplicados, los acuses, las plantillas con su revisión, el alta con el botón de Meta y el reloj de los mensajes programados. Lo nuevo es el opt-in explícito, las listas de contactos («grupos»), la limpieza de variables y los avisos de entrega.
 - **Grupos de WhatsApp:** la API oficial los tiene, pero solo para cuentas oficiales verificadas (insignia azul), con **8 personas como máximo** y entrando por enlace de invitación (sección 10). **No sirven aquí.** Los «grupos» serán listas de contactos en el panel, con un envío individual a cada integrante.
-- **⚠ Costo:** WhatsApp es la pieza más cara de toda la app. Con 100 conductores, 3 avisos por entrega costarían **~USD 2.900 al mes**, contra ~USD 300 de todo lo demás. Recomiendo **un solo aviso por entrega** por WhatsApp (sección 14, pregunta 2).
+- **⚠ Costo:** WhatsApp es la pieza más cara de toda la app. Con 100 conductores, 3 avisos por entrega costarían **~USD 2.900 al mes**, contra ~USD 300 de todo lo demás. Recomiendo **un solo aviso por entrega** por WhatsApp (sección 14; se decide en la Fase 7-W).
 - **Fases:** la 3, 6 y 7 absorben a los agentes Entregas y Central y la modalidad «Enseñarle». Se agrega una fase nueva, **7-W «WhatsApp»**. La 8 suma el Agente de Rutas y la 9 el Agente de Llamadas (sección 15).
+
+---
+
+## 0.1 Respuestas del cliente (24-oct-2026) — mandan sobre el resto de este documento
+| Pregunta | Respuesta | Qué cambia en el diseño |
+|---|---|---|
+| ¿Quién es el «recepcionista»? | **El que recibe el pedido, y es un cliente.** Las entregas son a **empresas clientes** (por ejemplo, un local de Jumbo), no a edificios ni a personas en su casa | El «receptor» de la SPEC es un **cliente**: su nombre (Jumbo), el local o sucursal (Jumbo La Florida), la dirección y uno o más **contactos de recepción** (nombre y WhatsApp). La llamada automática y los WhatsApp van al contacto de recepción de ese local. La memoria aprende cosas de cada local, por ejemplo: «en Jumbo La Florida se entrega por el andén 3, de 7:00 a 11:00» |
+| ¿Un número por empresa o uno de Reparto? | **El Agente WhatsApp se conecta al WhatsApp de la empresa** | Un número y una cuenta de WhatsApp Business **por empresa**, conectados con Embedded Signup (como en Cotigestión). Los clientes ven el número de la empresa, nunca uno de Reparto |
+| ¿El mensaje al entregar es obligatorio? | **Sí, obligatorio.** Pasa de la app al administrador, y del administrador (el agente) al cliente | Ver el flujo de abajo |
+| Verificación del negocio en Meta | **La hace el cliente** | Queda fuera del código. La Fase 7-W puede empezar con el número de prueba mientras tanto |
+| ¿Cuántos WhatsApp por entrega? | *Pendiente.* Se decide al abrir la Fase 7-W | Mientras tanto, el diseño asume uno o dos por entrega (sección 14) |
+
+**El mensaje de la entrega, paso a paso:**
+1. **Conductor (app):** toca «Entregar» o «No entregado». La foto y el mensaje son **obligatorios** (escrito o dictado). La app no deja confirmar sin los dos.
+2. **Servidor:** guarda la entrega una sola vez (UUID) y emite `entrega.registrada`.
+3. **Agente de Entregas:** revisa la foto, clasifica y resume. El mensaje original del conductor llega **al administrador** (panel, en tiempo real) y al Agente Central.
+4. **Agente Central (el lado del administrador):** prepara el mensaje para el cliente con la plantilla `paquete_entregado` (o `entrega_no_realizada`), usando el mensaje del conductor, la hora y, si la empresa lo activa, la foto como comprobante. Pasa el texto a un tono apto para el cliente, **sin inventar nada**: si el conductor escribió «dejé 12 cajas en el andén 3, firmó Pedro», el cliente recibe eso mismo, ordenado.
+   - **Modo «Propone»** (por defecto): el administrador ve el mensaje listo con **Enviar / Editar / Cancelar**.
+   - **Modo «Responde solo»:** sale directo, dentro de los límites duros.
+5. **Agente WhatsApp:** lo envía al contacto de recepción del cliente desde el WhatsApp de la empresa, y registra el estado y el costo.
+
+**El conductor nunca escribe directo al cliente**, y el cliente nunca recibe un texto que no pasó por la empresa.
 
 ---
 
@@ -34,12 +56,12 @@ Propuesta para aprobar **antes** de programar. Manda `00-decisiones-etapa-A.md`;
 |---|---|---|---|
 | Decisiones Etapa A | Sin WhatsApp | WhatsApp oficial de Meta para avisos, rutas y documentos | Pedido del cliente |
 | 2, paso 8 «Cerca» | Aviso en la app | Aviso en la app **más** llamada automática al recepcionista (si la empresa la activa) **más** WhatsApp si la persona dio su opt-in | Agente de Llamadas |
-| 2, paso 12 «Entregar» | Foto(s) y mensaje opcional | Foto(s) **obligatorias** y mensaje escrito o dictado (ver pregunta 3). La foto la revisa el Agente de Entregas | Pedido del cliente |
+| 2, paso 12 «Entregar» | Foto(s) y mensaje opcional | Foto(s) y mensaje (escrito o dictado) **obligatorios**. El mensaje va al administrador y, desde ahí, el agente lo envía al cliente (sección 0.1) | Pedido del cliente |
 | 2, estado `fallida` | Sin detalle | «No entregado» exige **motivo de una lista, foto y mensaje**. El estado sigue siendo `fallida`: **no se crea ningún estado nuevo** | Respetar la SPEC |
 | 2 (nuevo) | — | **«Incidencia» no es un estado: es una marca** sobre la entrega (`urgente = sí`), por ejemplo un paquete dañado o que lo recibió otra persona. La pone el Agente de Entregas y la ve el administrador | No romper la máquina de estados |
 | 3.9 Llamadas | Descartado el número telefónico (Twilio), por precio | Twilio vuelve **solo como respaldo** de la llamada automática de aviso: llamada de ida, con voz grabada, sin conversación entre personas. **Nadie ve el número de nadie**: marca el servidor | El descarte era para conversaciones conductor–receptor; esto es otra cosa y casi siempre lo resuelve Stream, que es gratis |
 | 3.11 / 5 Asistente | Un asistente | Cinco agentes con una cola de eventos (sección 5). El asistente de la SPEC pasa a ser el **Agente Central** | Pedido del cliente |
-| 4.1 Datos | — | Tablas nuevas (sección 13). `acciones_asistente` pasa a registrar a **todos** los agentes. `mensajes_programados` suma canal, lista y repetición | |
+| 4.1 Datos | `receptores` = persona final | `receptores` pasa a ser el **cliente** (empresa y local, como Jumbo La Florida), con `contactos_recepcion`. Tablas nuevas (sección 13). `acciones_asistente` pasa a registrar a **todos** los agentes. `mensajes_programados` suma canal, lista y repetición | |
 | 5.2 Modos | Propone / Responde solo | Igual. «Responde solo» también vale para WhatsApp, con los mismos temas permitidos | |
 | 5.4 Límites duros | 8 reglas | Las mismas, más: opt-in de WhatsApp, un WhatsApp por aviso y persona, y topes de gasto de WhatsApp y Twilio (sección 12) | |
 | 7 Pantallas | — | Panel: Entregas en vivo con foto, Avisos de llegada, Programar (con listas), Grupos, Chat con el Agente Central, Enseñarle, Correcciones, Auditoría y WhatsApp (conexión, plantillas y costos). App: «No entregado» y dictado | |
@@ -220,6 +242,7 @@ flowchart LR
 - **Rol:** el asistente de la SPEC 5, ampliado. Recibe todo (entregas, fotos, mensajes, documentos y conversaciones), lee Excel y PDF, responde preguntas («¿quién va atrasado?») y envía mensajes y documentos por WhatsApp **a través del Agente WhatsApp** (emite `aviso.pedido` o `envio.pedido`).
 - **Modos:** «Propone» por defecto y «Responde solo», como en la SPEC 5.2.
 - **Escucha:** `orden.admin`, `entrega.clasificada`, `entrega.incidencia`, `entrega.retraso`, `mensaje.entrante`, `llamada.resultado`, `whatsapp.*`, `resumen.diario` y `documento.subido`. **Emite:** `aviso.pedido`, `envio.pedido`, `ruta.pedida` y `llamada.pedida`.
+- **Mensaje de la entrega al cliente:** con cada `entrega.clasificada` prepara el mensaje para el contacto de recepción (sección 0.1). En «Propone» espera Enviar / Editar / Cancelar; en «Responde solo» emite `envio.pedido` directo.
 
 | Herramienta | Entra | Sale | Efecto | Permiso |
 |---|---|---|---|---|
@@ -302,15 +325,15 @@ Cuando un agente se equivoca, alguien de la empresa lo corrige ahí mismo, sobre
 
 | Lección | ¿Se aplica sola? | Ejemplo |
 |---|---|---|
-| `sinonimo_direccion` | **Sí** | «Edificio Torre Sol» = Los Leones 1180 |
-| `instruccion_entrega` | **Sí** | «En Los Leones 1180 se deja en conserjería» |
-| `dato_cliente` | No: espera a una persona | Cambiar el teléfono, el nombre o la dirección de un receptor |
-| `conflicto` | No | Ya se había aprendido que en esa dirección se deja «en la puerta» |
+| `sinonimo_cliente` | **Sí** | «Jumbo Florida» = Jumbo La Florida, Av. Vicuña Mackenna 7110 |
+| `instruccion_entrega` | **Sí** | «En Jumbo La Florida se entrega por el andén 3» |
+| `dato_cliente` | No: espera a una persona | Cambiar el contacto, el teléfono, la dirección o el horario de recepción de un cliente |
+| `conflicto` | No | Ya se había aprendido que en ese local se entrega «por la puerta principal» |
 | `ninguna` | No: se guarda como señal | «Clasificó mal la foto» |
 
 - **Se niega a aprender** lo que ensucia sin aportar: algo que ya sabía, una frase suelta (menos de 3 o más de 120 caracteres), un duplicado o un código usado como apodo. Siempre explica por qué a quien corrigió (`nada(porque)` de Cotigestión).
 - **Lo que no deja lección se guarda igual.** Un **resumen semanal** (lunes, panel) muestra los errores que se repiten.
-- **Las entregas también enseñan, con las mismas reglas.** Si tres conductores distintos escriben «dejado en conserjería» en la misma dirección, se propone la lección `instruccion_entrega`. Se aplica sola solo si no choca con otra; si choca, queda como `conflicto`.
+- **Las entregas también enseñan, con las mismas reglas.** Si tres conductores distintos escriben «entregado en andén 3» en el mismo local, se propone la lección `instruccion_entrega`. Se aplica sola solo si no choca con otra; si choca, queda como `conflicto`.
 
 ---
 
@@ -347,7 +370,8 @@ Cuando un agente se equivoca, alguien de la empresa lo corrige ahí mismo, sobre
 | Nombre | Cuerpo propuesto (borrador) |
 |---|---|
 | `aviso_llegada` | Hola {{nombre}}, tu pedido de {{empresa}} llega aproximadamente a las {{hora}}. Puedes seguirlo aquí: {{enlace}}. Gracias. |
-| `paquete_entregado` | Hola {{nombre}}, tu pedido de {{empresa}} fue entregado a las {{hora}} en {{lugar}}. Gracias por preferirnos. |
+| `paquete_entregado` | Hola {{nombre}}, {{empresa}} entregó su pedido en {{local}} a las {{hora}}. Detalle del conductor: {{mensaje}}. Cualquier consulta, responda este mensaje. *(Encabezado opcional: la foto de la entrega)* |
+| `entrega_no_realizada` | Hola {{nombre}}, {{empresa}} no pudo entregar su pedido en {{local}} a las {{hora}}. Motivo: {{mensaje}}. Le contactaremos para coordinar. |
 | `ruta_del_dia` | Hola {{nombre}}, tu ruta de hoy con {{empresa}} tiene {{cantidad}} entregas. La primera es a las {{hora}}. Revisa el detalle en la app. |
 | `aviso_general` | Hola {{nombre}}, {{empresa}} te informa: {{texto}}. Si tienes dudas, responde este mensaje. |
 | `resumen_diario` | Resumen de {{empresa}} del {{fecha}}: {{entregadas}} entregadas, {{fallidas}} no entregadas y {{incidencias}} incidencias. Detalle en el panel. |
@@ -413,7 +437,7 @@ sequenceDiagram
 ```
 - **Si no tiene app, o tiene la web cerrada** (SPEC 3.9: el timbre web solo suena con la página abierta), se salta Stream y se va directo a Twilio.
 - **Se detiene en cuanto alguien contesta.** Twilio detecta si atendió una persona o un buzón de voz (Answering Machine Detection, ~USD 0,0075 por llamada ⚠). El buzón cuenta como «no contestó».
-- **Guion fijo, sin IA:** «Hola, te llamamos de parte de Despachos Cordillera. Tu pedido llega en unos 5 minutos. Este es un aviso automático del asistente de Despachos Cordillera.» Se repite una vez.
+- **Guion fijo, sin IA:** «Hola, le llamamos de parte de Despachos Cordillera. El pedido para Jumbo La Florida llega en unos 5 minutos. Este es un aviso automático del asistente de Despachos Cordillera.» Se repite una vez.
   - **Voz:** Twilio no tiene voz chilena; se usa `es-US` o `es-MX` ⚠ se elige al escucharlas en la Fase 9.
 - **Registro en `llamadas_automaticas`:** hora de cada intento, canal (Stream o Twilio), resultado (contestó, no contestó, buzón, ocupado, falló), duración y costo.
   - Twilio informa el precio real unos minutos después, en su aviso de estado; mientras tanto se guarda el estimado.
@@ -447,6 +471,8 @@ Todos viven en **una sola función del servidor** (`ejecutar_accion`), por la qu
 | `entregas_evento` | Un evento por agente | (evento_id, agente) PK, estado, intentos, tomado_en, error |
 | `config_agentes` | Configuración por empresa y agente | empresa_id, agente, modelo, modo, activo, topes, horario_llamadas, avisos_automaticos |
 | `acciones_asistente` (ampliada) | Auditoría de todos los agentes | + agente, evento_id, modelo, tokens_entrada, tokens_salida, costo_usd |
+| `contactos_recepcion` | Quién recibe en cada cliente | receptor_id (el cliente o local), nombre, cargo, teléfono (oculto para conductores), horario de recepción, principal (sí o no) |
+| `mensajes_cliente` | El mensaje de la entrega camino al cliente | entrega_id, texto_conductor, texto_propuesto, texto_enviado, foto_id, estado (propuesto, editado, enviado, cancelado), aprobado_por |
 | `clasificaciones_entrega` | Lo que dijo el Agente de Entregas | entrega_id, clase, resumen, urgente, revisar, foto_ok, motivo_foto |
 | `whatsapp` | Conexión (de Cotigestión) | empresa_id **único**, telefono_id **único**, waba_id, secretos con permiso por columna |
 | `whatsapp_visto` | Duplicados de Meta | wamid PK |
@@ -504,25 +530,17 @@ Con eso, el costo de WhatsApp baja a menos de la mitad, según cuántos receptor
 ### 15.1 Cambios por fase
 | Fase | Se agrega | Listo cuando… |
 |---|---|---|
-| **3. Conductor: el día** | «Entregar» con fotos obligatorias y mensaje escrito o dictado (dictado del teclado del teléfono: gratis y funciona sin señal en la mayoría de los equipos); «No entregado» con motivo, foto y mensaje; hora y GPS automáticos; cola de eventos; **Agente de Entregas**; auditoría base | Con dos teléfonos haces el día de Matías: una foto borrosa a propósito se rechaza **en el momento**; «No entregado» exige motivo; el panel muestra foto, mensaje, hora, ubicación y resumen al instante; una incidencia aparece en rojo como urgente |
+| **3. Conductor: el día** | «Entregar» con foto y mensaje **obligatorios**, escrito o dictado (dictado del teclado del teléfono: gratis y funciona sin señal en la mayoría de los equipos); «No entregado» con motivo, foto y mensaje; el mensaje llega al panel del administrador; hora y GPS automáticos; cola de eventos; **Agente de Entregas**; auditoría base | Con dos teléfonos haces el día de Matías: una foto borrosa a propósito se rechaza **en el momento**; sin mensaje no se puede confirmar; «No entregado» exige motivo; el panel muestra foto, mensaje, hora, ubicación y resumen al instante; una incidencia aparece en rojo como urgente |
 | **6. Mensajería** | Programar a persona, lista o grupo, por la app; repetición; reloj `pg_cron` con Vault (de Cotigestión); listas de contactos en el panel | El aviso de las 08:20 sale a esa hora, una vez, a la lista «Conductores»; uno semanal sale dos lunes seguidos |
-| **7. Asistente de IA** | **Agente Central** (herramientas, modos, leer Excel y PDF); «Enseñarle»; «Correcciones»; memoria de entregas; resumen semanal; topes con aviso al 80 % | Además de lo de la SPEC: subes un PDF de 3 páginas y el ensayo muestra el texto completo, **con su primera línea**; subirlo otra vez no duplica; corriges «en Los Leones 1180 se deja en conserjería» y se aplica sola; corregir el teléfono de un cliente queda pendiente de aprobación; repetir algo ya sabido se rechaza con su motivo |
+| **7. Asistente de IA** | **Agente Central** (herramientas, modos, leer Excel y PDF, mensaje de la entrega para el cliente con Enviar / Editar / Cancelar); «Enseñarle»; «Correcciones»; memoria de entregas; resumen semanal; topes con aviso al 80 % | Además de lo de la SPEC: subes un PDF de 3 páginas y el ensayo muestra el texto completo, **con su primera línea**; subirlo otra vez no duplica; corriges «en Jumbo La Florida se entrega por el andén 3» y se aplica sola; al entregar, el mensaje del conductor aparece en el panel listo para el cliente; corregir el teléfono de un cliente queda pendiente de aprobación; repetir algo ya sabido se rechaza con su motivo |
 | **7-W. WhatsApp (nueva)** | Conexión (cuatro datos y Embedded Signup); webhook; `qa/comprobar-webhook.mjs`; plantillas con `revisarPlantilla()`; opt-in; listas con envío individual; ventana de 24 h; **Agente WhatsApp**; costos en el panel. Todo con el **número de prueba de Meta (5 teléfonos)** | Meta valida el webhook a la primera; un mensaje duplicado (mismo `wamid`) se atiende una vez; una firma falsa recibe 401; sin opt-in queda «bloqueado: sin opt-in»; fuera de la ventana sin plantilla queda «bloqueado» y el panel lo avisó al programar; con plantilla aprobada llega `aviso_llegada`; «BAJA» apaga el opt-in; un mensaje con trampa no logra datos de nadie |
 | **8. ETA, retraso y orden** | **Agente de Rutas**: reparto equilibrado propuesto, aprobación del administrador, recálculo ante urgencia o atraso, ruta por WhatsApp y en la app | Además de lo de la SPEC: a las 07:00 aparece la propuesta; al aprobarla, cada conductor recibe `ruta_del_dia` una vez; una entrega urgente nueva reordena la ruta de Matías sin moverla a otro conductor sin aprobación |
 | **9. Llamadas** | **Agente de Llamadas**: Stream, Twilio (voz en español), reintento a los 30 s y después WhatsApp; registro de hora, resultado y costo | Con la app del receptor cerrada, suena por Stream; si no contesta en 15 s, suena su teléfono; si tampoco, reintento a los 30 s y luego llega el WhatsApp; si contesta en el primer intento, no sale nada más; el panel muestra el costo |
 
 ---
 
-## 16. Preguntas para aprobar este diseño (máximo 4)
-1. **¿Quién es el «recepcionista»?** ¿El receptor de la entrega o una persona aparte (conserje o recepción del lugar de destino)?
-   *Propuesta:* cada entrega tiene un «contacto de recepción» opcional; si no se indica, es el receptor.
-2. **¿Cuántos avisos por WhatsApp por entrega?** Es lo que más pesa en el costo (sección 14).
-   *Propuesta:* uno solo (`aviso_llegada`), solo a quien no tiene la app; el resto por la app.
-3. **El mensaje al entregar, ¿obligatorio u opcional?** La SPEC lo dejaba opcional, y escribir de pie con un paquete en la mano cuesta.
-   *Propuesta:* obligatorio solo en «No entregado»; en «Entregar», opcional y con dictado a un toque.
-4. **¿Un número de WhatsApp por empresa o uno solo de Reparto para todas?**
-   *Propuesta:* uno por empresa con Embedded Signup, como en Cotigestión. Durante la validación, un solo número conectado con los cuatro datos.
-   *Trámite que conviene empezar ya:* la verificación del negocio en Meta, que tarda días y bloquea todo lo demás.
+## 16. Preguntas
+Las preguntas 1, 3 y 4 quedaron respondidas el 24-oct-2026 (sección 0.1). **Queda una abierta para la Fase 7-W:** ¿cuántos WhatsApp por entrega? La propuesta es uno o dos: `aviso_llegada` y, si la empresa lo quiere, `paquete_entregado` con el mensaje del conductor.
 
 ---
 
