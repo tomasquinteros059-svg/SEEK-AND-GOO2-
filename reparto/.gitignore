@@ -22,3 +22,5 @@ supabase/.temp/
 coverage/
 apps/web/test-results/
 apps/web/playwright-report/
+apps/movil/dist-web/
+apps/movil/test-results/

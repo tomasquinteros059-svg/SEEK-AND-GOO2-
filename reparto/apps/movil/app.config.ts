@@ -42,13 +42,23 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   plugins: [
+    "expo-router",
     "expo-font",
+    [
+      "expo-image-picker",
+      {
+        cameraPermission: "La cámara se usa para fotografiar tu licencia y, más adelante, las entregas.",
+        photosPermission: "Tus fotos se usan para elegir la imagen de tu licencia o documentos.",
+        microphonePermission: false,
+      },
+    ],
     sentry,
     [
       "expo-splash-screen",
       { image: "./assets/splash-icon.png", imageWidth: 160, backgroundColor: marca },
     ],
   ],
+  experiments: { typedRoutes: false },
   runtimeVersion: { policy: "appVersion" },
   ...(proyectoEas
     ? { updates: { url: `https://u.expo.dev/${proyectoEas}` }, extra: { eas: { projectId: proyectoEas } } }

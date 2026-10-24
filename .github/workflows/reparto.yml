@@ -51,17 +51,47 @@ jobs:
           EXPO_OFFLINE: "1"
           CI: "1"
 
-  base-de-datos:
-    name: Base de datos (migraciones y pruebas pgTAP)
+  punta-a-punta:
+    name: Base de datos y pruebas de punta a punta (panel y app)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: reparto/.nvmrc
+          cache: npm
+          cache-dependency-path: reparto/package-lock.json
       - uses: supabase/setup-cli@v1
         with:
           version: 2.122.0
-      - run: supabase db start
-      - run: supabase test db
+      - run: npm ci --no-audit --no-fund
+      - name: Levantar Supabase local (solo lo necesario)
+        run: supabase start -x realtime,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta
+      - name: Pruebas de base de datos (pgTAP)
+        run: supabase test db
+      - name: Variables de Supabase local
+        run: |
+          supabase status -o env | grep -E '^(API_URL|ANON_KEY)=' | sed 's/"//g' > /tmp/supa.env
+          echo "E2E_SUPABASE_URL=$(grep API_URL /tmp/supa.env | cut -d= -f2-)" >> "$GITHUB_ENV"
+          echo "E2E_SUPABASE_ANON_KEY=$(grep ANON_KEY /tmp/supa.env | cut -d= -f2-)" >> "$GITHUB_ENV"
+      - run: npx playwright install --with-deps chromium
+        working-directory: reparto/apps/web
+      - name: Panel de punta a punta
+        working-directory: reparto/apps/web
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: |
+          NEXT_PUBLIC_SUPABASE_URL=$E2E_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY=$E2E_SUPABASE_ANON_KEY npm run build
+          npm run e2e
+      - name: App de punta a punta (versión web de Expo)
+        working-directory: reparto/apps/movil
+        env:
+          EXPO_OFFLINE: "1"
+          CI: "1"
+        run: |
+          EXPO_PUBLIC_SUPABASE_URL=$E2E_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY=$E2E_SUPABASE_ANON_KEY npm run exportar:web
+          npm run e2e
 
   claves:
     name: Ninguna clave subida por error (SPEC 9)
