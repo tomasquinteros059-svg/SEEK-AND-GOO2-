@@ -83,3 +83,15 @@ Pedido del cliente. El diseño completo está en `agentes-y-whatsapp.md` y **esp
 - **La verificación del negocio en Meta la hace el cliente.**
 - Pendiente para la Fase 7-W: cuántos WhatsApp por entrega.
 
+
+### Revisión de viabilidad (24-oct-2026, ver `viabilidad.md`)
+- **WhatsApp y llamadas automáticas se cobran aparte, por uso.** El plan incluye la app, la web de seguimiento y las notificaciones dentro de la app. WhatsApp: extra por mensaje (propuesta: $25 + IVA) o un cupo incluido. Llamada automática: apagada por defecto y cobrada aparte si la empresa la activa.
+- **Las entregas son a empresas clientes y usan guía de despacho y bultos.** Cada entrega lleva número de guía (obligatorio), orden de compra (opcional), cantidad de bultos, horario de recepción del local y foto de la guía firmada o timbrada como comprobante.
+- **Orden corto para validar:**
+  1. Fase 2 (entregas);
+  2. Fase 3 (el día del conductor);
+  3. una prueba temprana del GPS en iPhone y Android;
+  4. WhatsApp básico;
+  5. seguimiento web con enlace.
+
+  Las llamadas, la optimización de rutas, la memoria del agente y la app del receptor esperan a que la validación las pida.

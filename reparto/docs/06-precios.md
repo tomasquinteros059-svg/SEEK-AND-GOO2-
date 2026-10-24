@@ -20,7 +20,12 @@ Análisis del 19 de octubre de 2026. Precios en pesos chilenos, **más IVA**. Ti
 | **Entregas extra** | Sobre el uso justo (800 entregas por conductor al mes) | $2.990 por cada 100 | US$3,2 |
 
 - **Pago anual:** 2 meses gratis (pagas 10).
-- **Todos los planes incluyen todo**, también el asistente de IA, que es el diferenciador.
+- **Los planes incluyen** la app, el panel, la web de seguimiento, las notificaciones dentro de la app y el asistente de IA.
+- **Extras cobrados por uso (decisión del 24-oct-2026, ver `viabilidad.md`):**
+  - WhatsApp: ~$25 + IVA por mensaje (costo de Meta ~USD 0,020), o un cupo incluido;
+  - llamada automática al cliente: apagada por defecto, se cobra por minuto si se activa.
+
+  Incluirlos en el precio fijo hace perder plata con cada conductor.
 
 ## Márgenes
 Margen sobre el costo de operar (servidores, IA, llamadas, comisión de pago). **No incluye** tu sueldo, soporte ni impuesto a la renta.
