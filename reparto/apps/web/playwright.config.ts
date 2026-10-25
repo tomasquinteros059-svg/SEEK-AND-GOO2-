@@ -6,6 +6,9 @@ import { defineConfig, devices } from "@playwright/test";
 const url = process.env.E2E_SUPABASE_URL ?? "http://127.0.0.1:54321";
 const clave = process.env.E2E_SUPABASE_ANON_KEY ?? "";
 const puerto = 3100;
+// E2E_SERVIDOR=cloudflare prueba el panel compilado para Cloudflare (workerd), igual que en producción.
+// Antes hay que compilarlo con `npm run cf:build`. Sus variables de servidor salen de .dev.vars.
+const enCloudflare = process.env.E2E_SERVIDOR === "cloudflare";
 
 export default defineConfig({
   testDir: "e2e",
@@ -20,10 +23,10 @@ export default defineConfig({
     ...(process.env.PW_CHROMIUM ? { launchOptions: { executablePath: process.env.PW_CHROMIUM } } : {}),
   },
   webServer: {
-    command: `npx next start -p ${puerto}`,
+    command: enCloudflare ? `npx opennextjs-cloudflare preview --port ${puerto}` : `npx next start -p ${puerto}`,
     port: puerto,
     reuseExistingServer: false,
-    timeout: 60_000,
+    timeout: 120_000,
     env: { NEXT_PUBLIC_SUPABASE_URL: url, NEXT_PUBLIC_SUPABASE_ANON_KEY: clave, NEXT_TELEMETRY_DISABLED: "1", GEOCODER: "simulado" },
   },
 });

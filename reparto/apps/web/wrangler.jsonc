@@ -1,0 +1,15 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  // Panel del administrador de Reparto. El nombre define la dirección: reparto-panel.<cuenta>.workers.dev
+  "name": "reparto-panel",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": { "enabled": true },
+  // Código minimizado: el plan gratis de Workers admite 3 MB comprimidos.
+  "minify": true
+}

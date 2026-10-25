@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { comunaRM } from "./comunas";
 import {
-  buscarEncabezados, conUbicacion, leerCsv, mapearColumnas, normalizarHora, normalizarMonto, resumen, revisarFilas,
+  buscarEncabezados, celdaATexto, conUbicacion, tablaValida, leerCsv, mapearColumnas, normalizarHora, normalizarMonto, resumen, revisarFilas,
   type Campo,
 } from "./planilla";
 import { claveDireccion, leerGoogle, leerNominatim, ubicarSimulado } from "./ubicacion";
@@ -159,5 +159,20 @@ describe("ubicación", () => {
 
   it("la clave de dirección coincide con la de la base", () => {
     expect(claveDireccion("Av. Vicuña  Mackenna 7110", "La Florida")).toBe("av. vicuna mackenna 7110, la florida");
+  });
+});
+
+describe("celdas de Excel y tabla del navegador", () => {
+  it("fechas, horas y números como los escribiría una persona", () => {
+    expect(celdaATexto(new Date(Date.UTC(2026, 9, 27)))).toBe("27-10-2026");
+    expect(celdaATexto(new Date(Date.UTC(1899, 11, 30, 9, 30)))).toBe("09:30");
+    expect(celdaATexto(12)).toBe("12");
+    expect(celdaATexto(null)).toBe("");
+  });
+  it("rechaza lo que no es una tabla de textos", () => {
+    expect(tablaValida([["a", "b"], ["1", "2"]], 10)).toBe(true);
+    expect(tablaValida([["a", 1]], 10)).toBe(false);
+    expect(tablaValida("a", 10)).toBe(false);
+    expect(tablaValida([["x".repeat(600)]], 10)).toBe(false);
   });
 });

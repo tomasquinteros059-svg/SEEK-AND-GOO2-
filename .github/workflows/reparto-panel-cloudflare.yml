@@ -1,0 +1,111 @@
+# Publica el panel web de Reparto en Cloudflare Workers (plan gratis).
+# - En la rama de publicación (variable PANEL_RAMA; si no está, la rama principal del repositorio):
+#   publica en la dirección fija del panel.
+# - En cualquier otra rama: sube una versión de prueba con su propia dirección, sin tocar la publicada.
+# - Si faltan las claves de Cloudflare, no hace nada (termina en verde con un aviso).
+# Configuración paso a paso: reparto/docs/panel-en-cloudflare.md
+name: Reparto · panel en Cloudflare
+
+on:
+  push:
+    paths:
+      - "reparto/**"
+      - ".github/workflows/reparto-panel-cloudflare.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: reparto-panel-cloudflare-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publicar:
+    name: Compilar y publicar el panel
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: reparto
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: ¿Están las claves?
+        id: claves
+        working-directory: .
+        env:
+          PROYECTO: ${{ vars.SUPABASE_PROYECTO_DESARROLLO }}
+          CLAVE_PUBLICA: ${{ vars.SUPABASE_CLAVE_PUBLICA_DESARROLLO }}
+          RAMA_PANEL: ${{ vars.PANEL_RAMA || github.event.repository.default_branch }}
+        run: |
+          if [ "$GITHUB_REF_NAME" = "$RAMA_PANEL" ]; then echo "publicar=si" >> "$GITHUB_OUTPUT"; else echo "publicar=no" >> "$GITHUB_OUTPUT"; fi
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::Faltan los secretos CLOUDFLARE_API_TOKEN y CLOUDFLARE_ACCOUNT_ID: no se publica. Ver reparto/docs/panel-en-cloudflare.md"
+            echo "listo=no" >> "$GITHUB_OUTPUT"
+          elif [ -z "$PROYECTO" ] || [ -z "$CLAVE_PUBLICA" ]; then
+            echo "::warning::Faltan las variables SUPABASE_PROYECTO_DESARROLLO y SUPABASE_CLAVE_PUBLICA_DESARROLLO: no se publica. Ver reparto/docs/panel-en-cloudflare.md"
+            echo "listo=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "listo=si" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v5
+        if: steps.claves.outputs.listo == 'si'
+      - uses: actions/setup-node@v5
+        if: steps.claves.outputs.listo == 'si'
+        with:
+          node-version-file: reparto/.nvmrc
+          cache: npm
+          cache-dependency-path: reparto/package-lock.json
+      - if: steps.claves.outputs.listo == 'si'
+        run: npm ci --no-audit --no-fund
+
+      - name: Compilar para Cloudflare
+        if: steps.claves.outputs.listo == 'si'
+        working-directory: reparto/apps/web
+        env:
+          # Los datos públicos quedan dentro del panel al compilar (la clave pública es pública por diseño: la seguridad está en RLS).
+          NEXT_PUBLIC_SUPABASE_URL: https://${{ vars.SUPABASE_PROYECTO_DESARROLLO }}.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_CLAVE_PUBLICA_DESARROLLO }}
+          NEXT_PUBLIC_APP_NOMBRE: ${{ vars.APP_NOMBRE }}
+          NEXT_PUBLIC_URL_PANEL: ${{ vars.PANEL_URL }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ vars.SENTRY_DSN_WEB }}
+          NEXT_PUBLIC_ENTORNO: desarrollo
+        run: npm run cf:build
+
+      - name: Publicar (rama de publicación)
+        if: steps.claves.outputs.listo == 'si' && steps.claves.outputs.publicar == 'si'
+        working-directory: reparto/apps/web
+        run: npx opennextjs-cloudflare deploy
+
+      - name: Subir versión de prueba (otras ramas)
+        if: steps.claves.outputs.listo == 'si' && steps.claves.outputs.publicar == 'no'
+        working-directory: reparto/apps/web
+        run: npx opennextjs-cloudflare upload
+
+      - name: Claves del servidor del panel
+        # Solo en la rama de publicación. Las versiones de prueba usan las mismas claves que la publicada.
+        if: steps.claves.outputs.listo == 'si' && steps.claves.outputs.publicar == 'si'
+        working-directory: reparto/apps/web
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          GOOGLE_GEOCODING_KEY: ${{ secrets.GOOGLE_GEOCODING_KEY }}
+          GEOCODER: ${{ vars.GEOCODER }}
+          CORREO_CONTACTO: ${{ vars.CORREO_CONTACTO }}
+          CORREO_REMITENTE: ${{ vars.CORREO_REMITENTE }}
+          NOMINATIM_URL: ${{ vars.NOMINATIM_URL }}
+        run: |
+          # Solo las que tienen valor. El archivo vive en la carpeta temporal del runner y se borra al terminar.
+          node -e '
+            const nombres = ["RESEND_API_KEY","GOOGLE_GEOCODING_KEY","GEOCODER","CORREO_CONTACTO","CORREO_REMITENTE","NOMINATIM_URL"];
+            const datos = Object.fromEntries(nombres.filter((n) => process.env[n]).map((n) => [n, process.env[n]]));
+            require("fs").writeFileSync(process.env.RUNNER_TEMP + "/claves.json", JSON.stringify(datos));
+            console.log("claves con valor:", Object.keys(datos).join(", ") || "ninguna");
+          '
+          if [ "$(cat "$RUNNER_TEMP/claves.json")" != "{}" ]; then
+            npx wrangler secret bulk "$RUNNER_TEMP/claves.json"
+          fi
+          rm -f "$RUNNER_TEMP/claves.json"

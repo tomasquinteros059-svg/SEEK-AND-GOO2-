@@ -84,6 +84,20 @@ jobs:
         run: |
           NEXT_PUBLIC_SUPABASE_URL=$E2E_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY=$E2E_SUPABASE_ANON_KEY NEXT_PUBLIC_MAPA_ESTILO=vacio npm run build
           npm run e2e
+      - name: Panel de punta a punta en Cloudflare (workerd, como en producción)
+        working-directory: reparto/apps/web
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          E2E_SERVIDOR: cloudflare
+        run: |
+          printf 'GEOCODER=simulado\n' > .dev.vars
+          NEXT_PUBLIC_SUPABASE_URL=$E2E_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY=$E2E_SUPABASE_ANON_KEY NEXT_PUBLIC_MAPA_ESTILO=vacio npm run cf:build
+          npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/cf" | tee "$RUNNER_TEMP/cf.txt"
+          # Tope del plan gratis de Workers: 3 MB comprimido. Avisa desde 2,9 MB.
+          kib=$(grep -oE 'gzip: [0-9.]+' "$RUNNER_TEMP/cf.txt" | grep -oE '[0-9.]+' | cut -d. -f1)
+          if [ "$kib" -gt 3072 ]; then echo "::error::El panel pesa ${kib} KiB comprimido: pasa los 3 MB del plan gratis de Workers"; exit 1; fi
+          if [ "$kib" -gt 2900 ]; then echo "::warning::El panel pesa ${kib} KiB comprimido, cerca de los 3 MB del plan gratis"; fi
+          npm run e2e
       - name: App de punta a punta (versión web de Expo)
         working-directory: reparto/apps/movil
         env:

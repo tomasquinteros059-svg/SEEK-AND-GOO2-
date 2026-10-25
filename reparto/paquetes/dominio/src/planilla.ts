@@ -99,6 +99,24 @@ export function leerCsv(texto: string): string[][] {
   return filas.filter((f) => f.some((c) => c.trim() !== ""));
 }
 
+/** Convierte una celda de Excel a texto como la escribiría una persona (fechas dd-mm-aaaa, horas hh:mm). */
+export function celdaATexto(c: unknown): string {
+  if (c === null || c === undefined) return "";
+  if (c instanceof Date) {
+    // Una hora sola en Excel llega como fecha del 30-12-1899.
+    if (c.getUTCFullYear() < 1901) return `${String(c.getUTCHours()).padStart(2, "0")}:${String(c.getUTCMinutes()).padStart(2, "0")}`;
+    return `${String(c.getUTCDate()).padStart(2, "0")}-${String(c.getUTCMonth() + 1).padStart(2, "0")}-${c.getUTCFullYear()}`;
+  }
+  if (typeof c === "boolean") return c ? "Sí" : "No";
+  return String(c).trim();
+}
+
+/** Revisa que lo que llegó del navegador sea una tabla de textos razonable (nunca se confía en el navegador). */
+export function tablaValida(filas: unknown, maxFilas: number, maxColumnas = 60): filas is string[][] {
+  return Array.isArray(filas) && filas.length <= maxFilas + 10
+    && filas.every((f) => Array.isArray(f) && f.length <= maxColumnas && f.every((c) => typeof c === "string" && c.length <= 500));
+}
+
 // --- Valores ----------------------------------------------------------------
 
 /** "9:30", "09:30", "9.30", "930" → "09:30". */

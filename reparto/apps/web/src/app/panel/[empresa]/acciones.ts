@@ -5,11 +5,11 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
-  buscarEncabezados, CAMPOS, clave, comunaRM, conUbicacion, mapearColumnas, resumen, revisarFilas,
+  buscarEncabezados, CAMPOS, clave, comunaRM, conUbicacion, mapearColumnas, resumen, revisarFilas, tablaValida,
   type Campo, type FilaRevisada,
 } from "@reparto/dominio";
 import { clienteServidor } from "@/lib/supabase/servidor";
-import { leerArchivo, TOPE_ARCHIVO, TOPE_FILAS } from "@/lib/excel";
+import { TOPE_FILAS } from "@/lib/excel";
 import { hoyEnChile } from "@/lib/fechas";
 import { porTanda, proveedor, ubicar } from "@/lib/ubicar";
 
@@ -42,19 +42,13 @@ async function contexto(supabase: Awaited<ReturnType<typeof clienteServidor>>, e
 
 // --- Carga por archivo -------------------------------------------------------
 
-export async function subirCarga(_: Estado, f: FormData): Promise<Estado> {
+/**
+ * El navegador lee el Excel (así el servidor queda liviano) y manda la tabla como texto.
+ * Aquí se revisa todo de nuevo: nunca se confía en lo que manda el navegador.
+ */
+export async function subirCarga(empresa: string, archivo: string, filas: unknown): Promise<Estado> {
   const { supabase, usuario } = await sesion();
-  const empresa = texto(f, "empresa");
-  const archivo = f.get("archivo");
-  if (!(archivo instanceof File) || archivo.size === 0) return { error: "Elige un archivo Excel (.xlsx) o CSV." };
-  if (archivo.size > TOPE_ARCHIVO) return { error: "El archivo pesa más de 5 MB." };
-
-  let filas: string[][];
-  try {
-    filas = await leerArchivo(archivo.name, Buffer.from(await archivo.arrayBuffer()));
-  } catch (e) {
-    return { error: e instanceof Error && e.message.startsWith("Sube") ? e.message : "No pude leer el archivo. ¿Es un Excel válido?" };
-  }
+  if (!tablaValida(filas, TOPE_FILAS)) return { error: `El archivo no se pudo leer o tiene más de ${TOPE_FILAS} filas.` };
   const fila0 = buscarEncabezados(filas);
   if (fila0 < 0) return { error: "No encontré los encabezados. Usa la plantilla (Cliente, Dirección, Fecha, N° guía, Bultos…)." };
   const { columnas, faltan } = mapearColumnas(filas[fila0]!);
@@ -74,7 +68,7 @@ export async function subirCarga(_: Estado, f: FormData): Promise<Estado> {
   const revisadas = revisarFilas(entrada, await contexto(supabase, empresa));
 
   const { data, error } = await supabase.from("cargas")
-    .insert({ empresa_id: empresa, creada_por: usuario.id, archivo: archivo.name.slice(0, 120), filas: revisadas })
+    .insert({ empresa_id: empresa, creada_por: usuario.id, archivo: archivo.slice(0, 120), filas: revisadas })
     .select("id").single();
   if (error || !data) return { error: "No pude guardar la vista previa. ¿Sigues siendo administrador?" };
   redirect(`/panel/${empresa}/cargar/${data.id}`);
