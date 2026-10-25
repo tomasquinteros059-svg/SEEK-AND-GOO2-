@@ -12,6 +12,9 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${puerto}`,
     ...devices["Pixel 7"],
+    // La app guarda dónde se entregó (permiso «mientras se usa»).
+    permissions: ["geolocation"],
+    geolocation: { latitude: -33.5206, longitude: -70.5986 },
     ...(process.env.PW_CHROMIUM ? { launchOptions: { executablePath: process.env.PW_CHROMIUM } } : {}),
   },
   webServer: { command: `node e2e/servir.cjs dist-web ${puerto}`, port: puerto, reuseExistingServer: false },

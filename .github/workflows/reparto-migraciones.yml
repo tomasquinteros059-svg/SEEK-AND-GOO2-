@@ -1,5 +1,6 @@
 # Reparto · aplica las migraciones de supabase/migrations al proyecto de
-# DESARROLLO en Supabase. Se lanza a mano desde GitHub → Actions.
+# DESARROLLO en Supabase y publica las funciones (como el Agente de Entregas).
+# Se lanza a mano desde GitHub → Actions.
 # (Producción tendrá su propio botón, con aprobación, cuando exista.)
 name: Reparto · migraciones (desarrollo)
 
@@ -35,3 +36,4 @@ jobs:
           version: 2.122.0
       - run: supabase link --project-ref "$PROYECTO" --password "$SUPABASE_DB_PASSWORD"
       - run: supabase db push --password "$SUPABASE_DB_PASSWORD"
+      - run: supabase functions deploy --project-ref "$PROYECTO"

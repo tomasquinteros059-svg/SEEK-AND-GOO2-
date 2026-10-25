@@ -123,3 +123,14 @@ export class Entrega {
     );
   }
 }
+
+/** Motivos de "No entregado" (se eligen con un toque, SPEC 8: nada que obligue a escribir al volante). */
+export const MOTIVOS_NO_ENTREGA = [
+  "Local cerrado",
+  "Fuera del horario de recepción",
+  "Rechazado por el cliente",
+  "Dirección incorrecta",
+  "Sin acceso al local",
+  "Nadie recibe",
+  "Otro",
+] as const;

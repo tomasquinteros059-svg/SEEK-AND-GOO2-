@@ -334,6 +334,31 @@ as $$
   returning *
 $$;
 
+-- Las entregas del día del conductor, con lo mínimo del local (nunca teléfonos) y su punto.
+-- Corre con los permisos de quien llama: el conductor solo ve las suyas publicadas.
+create or replace function public.mis_entregas_del_dia(empresa uuid, dia date)
+returns table (
+  id uuid, empresa_id uuid, estado public.estado_entrega, guia text, bultos integer, orden integer,
+  hora_comprometida time, ventana_desde time, ventana_hasta time, notas text, direccion text, comuna text,
+  receptor jsonb, pago jsonb
+)
+language sql stable security invoker set search_path = ''
+as $$
+  select e.id, e.empresa_id, e.estado, e.guia, e.bultos, e.orden, e.hora_comprometida, e.ventana_desde, e.ventana_hasta,
+         e.notas, e.direccion, e.comuna,
+         jsonb_build_object('nombre', r.nombre, 'notas', r.notas,
+           'lat', extensions.st_y(coalesce(e.punto, r.punto)::extensions.geometry),
+           'lng', extensions.st_x(coalesce(e.punto, r.punto)::extensions.geometry)),
+         (select jsonb_build_object('tipo', p.tipo, 'monto', p.monto, 'forma', p.forma, 'estado', p.estado) from public.pagos p where p.entrega_id = e.id)
+  from public.entregas e
+  join public.receptores r on r.id = e.receptor_id
+  where e.empresa_id = empresa and e.fecha = dia and e.conductor_id = auth.uid()
+    and e.estado not in ('borrador', 'asignada', 'cancelada')
+  order by e.orden nulls last, e.hora_comprometida nulls last, r.nombre
+$$;
+revoke all on function public.mis_entregas_del_dia(uuid, date) from public, anon;
+grant execute on function public.mis_entregas_del_dia(uuid, date) to authenticated;
+
 -- ---------------------------------------------------------------------------
 -- Reglas de acceso
 -- ---------------------------------------------------------------------------

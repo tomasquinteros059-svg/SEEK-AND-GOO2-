@@ -45,9 +45,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-router",
     "expo-font",
     [
+      "expo-location",
+      {
+        // Fase 3: solo mientras se usa la app (para registrar dónde se entregó). El GPS en segundo plano es la Fase 4.
+        locationWhenInUsePermission: "Tu ubicación se guarda junto a cada entrega para que la empresa sepa dónde se entregó.",
+        isAndroidBackgroundLocationEnabled: false,
+        isIosBackgroundLocationEnabled: false,
+      },
+    ],
+    [
       "expo-image-picker",
       {
-        cameraPermission: "La cámara se usa para fotografiar tu licencia y, más adelante, las entregas.",
+        cameraPermission: "La cámara se usa para fotografiar tu licencia y la guía firmada de cada entrega.",
         photosPermission: "Tus fotos se usan para elegir la imagen de tu licencia o documentos.",
         microphonePermission: false,
       },

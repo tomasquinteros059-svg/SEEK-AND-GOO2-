@@ -191,3 +191,26 @@ export async function borrarSector(f: FormData) {
   revalidatePath(`/panel/${empresa}/sectores`);
   redirect(`/panel/${empresa}/sectores`);
 }
+
+// --- Fase 3: publicar el día y corregir lo que propuso el agente ---------------------
+
+export async function publicarDia(f: FormData) {
+  const { supabase } = await sesion();
+  const empresa = texto(f, "empresa");
+  const fecha = texto(f, "fecha");
+  const { data, error } = await supabase.rpc("publicar_dia", { empresa, dia: fecha });
+  revalidatePath(`/panel/${empresa}/entregas`);
+  const aviso = error ? error.message : (data as number) === 0 ? "No había entregas asignadas por publicar." : `Se publicaron ${data as number} entregas: los conductores ya las ven.`;
+  redirect(`/panel/${empresa}/entregas?fecha=${fecha}&aviso=${encodeURIComponent(aviso)}`);
+}
+
+export async function guardarMensajeCliente(_: Estado, f: FormData): Promise<Estado> {
+  const { supabase } = await sesion();
+  const empresa = texto(f, "empresa");
+  const entrega = texto(f, "entrega");
+  const mensaje = texto(f, "mensaje").trim().slice(0, 1000);
+  const { error } = await supabase.from("clasificaciones_entrega").update({ mensaje_cliente: mensaje, urgente: f.get("urgente") === "si" })
+    .eq("entrega_id", entrega).eq("empresa_id", empresa);
+  revalidatePath(`/panel/${empresa}/entregas/${entrega}`);
+  return error ? { error: "No pude guardar." } : { ok: "Guardado." };
+}

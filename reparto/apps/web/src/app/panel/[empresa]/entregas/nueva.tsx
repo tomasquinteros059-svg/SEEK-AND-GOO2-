@@ -39,7 +39,7 @@ export function NuevaEntrega(p: { empresa: string; fecha: string; conductores: {
       <label className="campo">Contacto recepción<input name="contacto" defaultValue={v.contacto} /></label>
       <label className="campo">Teléfono contacto<input name="telefono" type="tel" defaultValue={v.telefono} /></label>
       <label className="campo">Conductor
-        <select name="conductor" defaultValue={v.conductor ?? ""}>
+        <select name="conductor" aria-label="Conductor" defaultValue={v.conductor ?? ""}>
           <option value="">Sin asignar</option>
           {p.conductores.map((c) => <option key={c.id} value={c.correo}>{c.nombre}</option>)}
         </select>

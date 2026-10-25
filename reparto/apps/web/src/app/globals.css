@@ -152,3 +152,17 @@ details.tarjeta > summary { cursor: pointer; min-height: 32px; list-style-positi
 .comunas label { display: flex; gap: 8px; align-items: center; min-height: 32px; }
 .campo input[type="color"] { padding: 4px; width: 64px; }
 .campo input[type="file"] { padding: 10px; }
+
+/* --- Fase 3: en vivo y detalle de entrega --- */
+.en-vivo { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--apagado); }
+.en-vivo::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--apagado); }
+.en-vivo.si { color: var(--ok); }
+.en-vivo.si::before { background: var(--ok); }
+.cifras > div.urgente { border-left: 6px solid var(--atraso); }
+.borde-urgente { border: 2px solid var(--atraso); }
+.linea-tiempo { margin: 0; padding-left: 20px; display: grid; gap: 12px; }
+.mensaje-conductor { margin: 6px 0; padding: 8px 12px; border-left: 4px solid var(--marca); background: var(--hundido); border-radius: 6px; }
+.galeria { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.galeria img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; }
+.campo textarea { border-radius: 10px; border: 1px solid var(--linea); background: var(--superficie); color: var(--tinta); padding: 10px 12px; font: 400 1.0625rem var(--fuente-texto); }
+.chip + .chip { margin-left: 6px; }

@@ -87,9 +87,15 @@ export default function Principal() {
               {membresias.length === 0 ? (
                 <Texto apagado>Todavía no trabajas con ninguna empresa. Pide que te inviten a {usuario.correo}.</Texto>
               ) : membresias.map((m) => (
-                <Texto key={m.empresa_id}>
-                  {m.empresas?.nombre ?? "Empresa"} · {m.rol === "admin" ? "Administrador" : "Conductor"}{m.estado === "suspendido" ? " · Acceso suspendido" : ""}
-                </Texto>
+                <View key={m.empresa_id} style={{ gap: 6 }}>
+                  <Texto>
+                    {m.empresas?.nombre ?? "Empresa"} · {m.rol === "admin" ? "Administrador" : "Conductor"}{m.estado === "suspendido" ? " · Acceso suspendido" : ""}
+                  </Texto>
+                  {m.rol === "conductor" && m.estado === "activo" ? (
+                    <Boton texto={`Ruta de hoy · ${m.empresas?.nombre ?? ""}`}
+                      onPress={() => router.push({ pathname: "/ruta", params: { empresa: m.empresa_id, nombre: m.empresas?.nombre ?? "" } })} />
+                  ) : null}
+                </View>
               ))}
             </Tarjeta>
             <Tarjeta>
@@ -102,9 +108,6 @@ export default function Principal() {
                   ))}
                 </View>
               ))}
-            </Tarjeta>
-            <Tarjeta>
-              <Texto apagado>Tu ruta del día aparecerá aquí (próxima fase).</Texto>
             </Tarjeta>
           </>
         ) : (

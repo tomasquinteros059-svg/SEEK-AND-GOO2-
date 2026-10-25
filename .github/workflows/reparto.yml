@@ -67,7 +67,7 @@ jobs:
           version: 2.122.0
       - run: npm ci --no-audit --no-fund
       - name: Levantar Supabase local (solo lo necesario)
-        run: supabase start -x realtime,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta
+        run: supabase start -x imgproxy,studio,logflare,vector,supavisor,postgres-meta
       - name: Pruebas de base de datos (pgTAP)
         run: supabase test db
       - name: Variables de Supabase local
