@@ -156,7 +156,7 @@ details > summary { cursor: pointer; font-weight: 600; }
   <div class="wrap">
     <div class="bar">
       <div class="marca"><h1>Asistente de Negocio</h1><span class="muted small">prototipo</span></div>
-      <div class="estado"><span class="pill" id="estado-ia">IA: revisando…</span><span class="pill" id="estado-datos">Datos: cargando…</span></div>
+      <div class="estado"><span class="pill" id="estado-ia">IA: revisando…</span><span class="pill" id="estado-datos">Datos: cargando…</span><button class="btn chico" id="btn-clave" data-action="clave" hidden>Clave de API</button></div>
     </div>
     <nav class="tabs" role="tablist" aria-label="Secciones">
       <button role="tab" id="tab-escanear" aria-selected="true" data-tab="escanear">Escanear</button>
@@ -168,6 +168,7 @@ details > summary { cursor: pointer; font-weight: 600; }
 </header>
 
 <main class="wrap">
+  <div id="panel-clave" hidden></div>
   <div id="banner"></div>
 
   <!-- ===================== ESCANEAR ===================== -->
@@ -524,13 +525,60 @@ function aplicarCargado(c) {
 /* ============================================================
    IA (Claude desde la cuenta del usuario)
    ============================================================ */
-const IA = { sample: null, imagenes: false, maxImgs: 1, listo: null };
+const IA = { sample: null, imagenes: false, maxImgs: 1, listo: null, modo: "no", claveMemoria: "" };
+const CLAVE_LS = "asistente-negocio-clave";
+function leerClave() { try { return localStorage.getItem(CLAVE_LS) || IA.claveMemoria; } catch { return IA.claveMemoria; } }
+async function imagenABase64(blob) {
+  const bmp = await createImageBitmap(blob).catch(() => null);
+  if (!bmp) throw { code: "image_rejected" };
+  const f = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas"); c.width = Math.round(bmp.width * f); c.height = Math.round(bmp.height * f);
+  const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.88).split(",")[1];
+}
+function parseJsonTolerante(t) {
+  try { return JSON.parse(t); } catch { /* sigue */ }
+  const m = t.match(/```(?:json)?\s*([\s\S]*?)```/); if (m) { try { return JSON.parse(m[1]); } catch { /* sigue */ } }
+  const i = t.search(/[\[{]/), j = Math.max(t.lastIndexOf("}"), t.lastIndexOf("]"));
+  if (i >= 0 && j > i) { try { return JSON.parse(t.slice(i, j + 1)); } catch { /* sigue */ } }
+  throw { code: "invalid_json", text: t };
+}
+/* Llama a la API de Claude directo desde el navegador, con la clave del usuario. */
+function clienteAPI(clave) {
+  const llamar = async (prompt, opts = {}) => {
+    const content = [];
+    for (const img of (opts.images ? [].concat(opts.images) : [])) content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: await imagenABase64(img) } });
+    content.push({ type: "text", text: prompt });
+    let r;
+    try {
+      r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal: opts.signal,
+        headers: { "content-type": "application/json", "x-api-key": clave, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        body: JSON.stringify({ model: "claude-opus-5-5", max_tokens: 16000, output_config: { effort: opts.images ? "medium" : "low" }, messages: [{ role: "user", content }] }) });
+    } catch { throw { code: "sin_conexion" }; }
+    const datos = await r.json().catch(() => ({}));
+    if (!r.ok) throw { code: ({ 400: "api_error", 401: "clave_invalida", 402: "sin_saldo", 403: "sin_permiso", 404: "modelo_no_disponible", 413: "prompt_too_large", 429: "rate_limited_api" }[r.status]) || (r.status >= 500 ? "saturado" : "api_error"), message: datos?.error?.message };
+    const u = datos.usage || {};
+    const usd = ((u.input_tokens || 0) * PRECIO_ENTRADA + (u.cache_read_input_tokens || 0) * 0.2 + (u.cache_creation_input_tokens || 0) * 5 + (u.output_tokens || 0) * PRECIO_SALIDA) / 1e6;
+    opts.onCosto?.(usd);
+    if (datos.stop_reason === "refusal") throw { code: "refused" };
+    const texto = (datos.content || []).filter((b) => b.type === "text").map((b) => b.text).join("");
+    if (!texto.trim()) throw { code: "empty_completion" };
+    return { text: texto, truncated: datos.stop_reason === "max_tokens" };
+  };
+  llamar.json = async (p, o) => { const r = await llamar(p, o); if (r.truncated) throw { code: "invalid_json", text: r.text }; return parseJsonTolerante(r.text); };
+  llamar.limits = async () => ({ images: { maxCount: 5 } });
+  llamar.esApi = true;
+  return llamar;
+}
+function activarClave(clave) { IA.sample = clienteAPI(clave); IA.imagenes = true; IA.maxImgs = 5; IA.modo = "api"; }
 IA.listo = (async () => {
   try {
-    if (!window.claude?.use) return;
-    IA.sample = await claude.use("sample");
-    if (IA.sample) { const lim = await IA.sample.limits().catch(() => null); IA.imagenes = !!lim?.images; IA.maxImgs = lim?.images?.maxCount || 1; }
+    if (window.claude?.use) {
+      IA.sample = await claude.use("sample");
+      if (IA.sample) { const lim = await IA.sample.limits().catch(() => null); IA.imagenes = !!lim?.images; IA.maxImgs = lim?.images?.maxCount || 1; IA.modo = "claude"; }
+    }
   } catch { IA.sample = null; }
+  if (!IA.sample) { const clave = leerClave(); if (clave) activarClave(clave); }
 })();
 const ERRORES_IA = {
   not_granted: "No diste permiso para usar Claude en esta página. Puedes activarlo en el menú de permisos de la página.",
@@ -544,8 +592,16 @@ const ERRORES_IA = {
   empty_completion: "La IA no devolvió respuesta. Intenta de nuevo.",
   prompt_too_large: "Hay demasiada información para enviarla de una vez. Borra notas o documentos largos.",
   upstream_error: "Se cortó la conexión con la IA. Revisa tu internet e intenta de nuevo.",
+  clave_invalida: "La clave de API no es válida. Revísala en «Clave de API» (arriba).",
+  sin_saldo: "Tu cuenta de la API no tiene saldo. Revisa la facturación en console.anthropic.com.",
+  sin_permiso: "Tu clave de API no tiene permiso para usar este modelo.",
+  modelo_no_disponible: "El modelo claude-opus-5-5 no está disponible para tu cuenta de la API.",
+  rate_limited_api: "Llegaste al límite de uso de la API. Espera un minuto e intenta de nuevo.",
+  saturado: "El servicio de IA está saturado. Intenta en unos minutos.",
+  sin_conexion: "No hay conexión con la IA. Revisa tu internet e intenta de nuevo.",
 };
-const errorIA = (e) => ERRORES_IA[e?.code] || (e?.code === "cancelled" ? "Cancelado." : "No se pudo hablar con la IA. Intenta de nuevo.");
+const errorIA = (e) => e?.code === "api_error" ? "La IA no aceptó la solicitud" + (e.message ? ": " + e.message : ".") : (ERRORES_IA[e?.code] || (e?.code === "cancelled" ? "Cancelado." : "No se pudo hablar con la IA. Intenta de nuevo."));
+const textoCosto = (usd) => `US$ ${usd.toFixed(3).replace(".", ",")} ≈ $${miles(usd * DOLAR)} CLP`;
 const estadoIA = () => IA.sample ? (IA.imagenes ? "ok" : "texto") : "no";
 
 function contextoNegocio(maxChars = 12000) {
@@ -714,16 +770,18 @@ async function procesar(p, file) {
     if (IA.sample && IA.imagenes) {
       const prompt = promptEscaneo(p.tipoPedido, imagenes.length);
       try {
-        crudo = await IA.sample.json(prompt, { images: imagenes, modelTier: "default" });
+        let usdReal = null;
+        crudo = await IA.sample.json(prompt, IA.sample.esApi ? { images: imagenes, onCosto: (u) => (usdReal = u) } : { images: imagenes, modelTier: "default" });
+        if (usdReal !== null) p.costoReal = { usd: usdReal, texto: textoCosto(usdReal) };
       } catch (e) {
         if (p.ejemplo && ["not_granted", "sampling_disabled", "images_unavailable"].includes(e?.code)) { crudo = RESPUESTAS_EJEMPLO[p.ejemplo]; p.simulado = true; }
         else throw { propio: errorIA(e) };
       }
-      p.costo = costoEstimado(prompt.length, imagenes.length, JSON.stringify(crudo || {}).length);
+      p.costo = p.costoReal || costoEstimado(prompt.length, imagenes.length, JSON.stringify(crudo || {}).length);
     } else if (p.ejemplo) {
       crudo = RESPUESTAS_EJEMPLO[p.ejemplo]; p.simulado = true;
     } else {
-      throw { propio: IA.sample ? "En esta vista no se pueden enviar fotos a Claude. Abre la página en claude.ai." : "La IA solo funciona con la página abierta en claude.ai. Puedes probar con las fotos de ejemplo." };
+      throw { propio: IA.sample ? "En esta vista no se pueden enviar fotos a Claude. Abre la página en claude.ai." : "La IA no está conectada. Presiona «Clave de API» arriba y pega tu clave, o prueba con las fotos de ejemplo." };
     }
     p.datos = normalizarResultado(crudo);
     const r = p.datos;
@@ -761,7 +819,7 @@ function htmlTarjeta(p) {
   const guardable = p.estado === "listo" && r && (r.dt || r.li || r.fo);
   return `<article class="doc" id="p-${p.uid}">
     <div class="doc-cab"><div><h3>${esc(p.nombre)}</h3><span class="small muted">${esc(tipo)}${p.simulado ? " · respuesta de ejemplo (sin IA)" : ""}</span></div>
-      ${p.costo ? `<span class="small muted mono" title="Lo que costaría con la API de Claude">Costo estimado: ${p.costo.texto}</span>` : ""}</div>
+      ${p.costo ? `<span class="small muted mono" title="Lo que cuesta con la API de Claude">${p.costoReal ? "Costo" : "Costo estimado"}: ${p.costo.texto}</span>` : ""}</div>
     <div class="doc-cuerpo">
       <div class="doc-foto">${p.foto ? `<img src="${p.foto}" alt="Foto de ${esc(p.nombre)}">` : `<div class="vacio small">Sin vista previa</div>`}</div>
       <div class="doc-datos">${cuerpo}
@@ -971,7 +1029,12 @@ function registrosDesdeDocs(docs) { return docs.filter((d) => d.tipo === "boleta
 async function ofrecerDescarga(wb, nombre) {
   const buf = await wb.xlsx.writeBuffer();
   const dl = window.claude?.use ? await claude.use("downloads").catch(() => null) : null;
-  if (!dl) { avisoExcel("error", "La descarga solo funciona con la página abierta en claude.ai."); return; }
+  if (!dl) {
+    const url = URL.createObjectURL(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    const a = document.createElement("a"); a.href = url; a.download = nombre; document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    avisoExcel("ok", `Listo: ${nombre} (revisa tu carpeta de descargas)`); return;
+  }
   try { await dl.save({ filename: nombre, data: new Blob([buf]) }); avisoExcel("ok", `Listo: ${nombre}`); }
   catch (e) { avisoExcel(e?.code === "declined" ? "advertencia" : "error", e?.code === "declined" ? "Cancelaste la descarga." : "No se pudo descargar el archivo."); }
 }
@@ -1288,11 +1351,12 @@ async function generarMensajes() {
   const btn = $('[data-action="generar"]'); btn.disabled = true;
   out.innerHTML = `<div class="panel"><div class="cargando"><span class="spin"></span>Entendiendo la instrucción…</div></div>`;
   await IA.listo;
-  let interp, usaIA = !!IA.sample, costoChars = 0, salidaChars = 0;
+  let interp, usaIA = !!IA.sample, costoChars = 0, salidaChars = 0, usdReal = 0;
+  const opcIA = () => IA.sample?.esApi ? { onCosto: (u) => (usdReal += u) } : { modelTier: "default", cache: false };
   try {
     if (usaIA) {
       const p1 = promptInterpretar(instr); costoChars += p1.length;
-      try { interp = await IA.sample.json(p1, { modelTier: "default", cache: false }); salidaChars += JSON.stringify(interp).length; }
+      try { interp = await IA.sample.json(p1, opcIA()); salidaChars += JSON.stringify(interp).length; }
       catch (e) { if (["not_granted", "sampling_disabled"].includes(e?.code)) { usaIA = false; interp = interpretarLocal(instr); } else throw e; }
     } else interp = interpretarLocal(instr);
     interp.filtros = Array.isArray(interp.filtros) ? interp.filtros.filter((f) => f && f.campo && f.operador) : [];
@@ -1309,7 +1373,7 @@ async function generarMensajes() {
       const lotes = []; for (let i = 0; i < conDato.length; i += 30) lotes.push(conDato.slice(i, i + 30));
       for (const lote of lotes) {
         const p2 = promptRedactar(instr, interp, lote, canal, tono); costoChars += p2.length;
-        const resp = await IA.sample.json(p2, { modelTier: "default", cache: false });
+        const resp = await IA.sample.json(p2, opcIA());
         salidaChars += JSON.stringify(resp).length;
         const arr = Array.isArray(resp) ? resp : (resp?.mensajes || []);
         for (const c of lote) {
@@ -1321,7 +1385,7 @@ async function generarMensajes() {
     } else {
       for (const c of conDato) { const m = redactarLocal(instr, interp, c, canal, tono); UI.resultado.mensajes.push({ id: c.id, nombre: c.nombre, destino: c[campoCanal], asunto: m.asunto, texto: m.texto, advertencia: null }); }
     }
-    UI.resultado.costo = usaIA ? costoEstimado(costoChars, 0, salidaChars) : null;
+    UI.resultado.costo = !usaIA ? null : IA.sample?.esApi ? { usd: usdReal, texto: textoCosto(usdReal), real: true } : costoEstimado(costoChars, 0, salidaChars);
     UI.resultado.estado = "listo";
     S.lotes.unshift({ id: nuevoId(), fecha: new Date().toISOString(), instr, canal, tono, mensajes: UI.resultado.mensajes.map(({ nombre, destino, asunto, texto }) => ({ nombre, destino, asunto, texto })) });
     S.lotes = S.lotes.slice(0, 20); Store.guardar("lotes"); pintarHistorial();
@@ -1345,7 +1409,7 @@ function pintarResultado() {
     ${R.elegidos === 0 ? `<div class="aviso advertencia">Ningún contacto cumple con lo pedido. Revisa la instrucción o los datos de tus clientes.</div>` : ""}
     ${R.mensajes.length ? `<div class="fila" style="justify-content:space-between"><h3>${R.mensajes.length} mensaje(s) por ${{ whatsapp: "WhatsApp", correo: "correo", sms: "SMS" }[R.canal]}</h3>
       <div class="fila"><button class="btn" data-action="copiar-todos">Copiar todos</button><button class="btn" disabled title="Disponible en una próxima versión">Enviar (próximamente)</button></div></div>
-      ${R.costo ? `<p class="small muted mono">Costo estimado del lote con la API: ${R.costo.texto}. En este prototipo se usa tu plan de Claude.</p>` : ""}
+      ${R.costo ? `<p class="small muted mono">${R.costo.real ? `Costo del lote: ${R.costo.texto}` : `Costo estimado del lote con la API: ${R.costo.texto}. En este prototipo se usa tu plan de Claude.`}</p>` : ""}
       ${R.mensajes.map((m, i) => `<div class="msj"><div class="msj-cab"><b>${esc(m.nombre)}</b><span class="small muted mono">${esc(m.destino || "")}</span></div>
         ${R.canal === "correo" ? `<label class="campo"><span>Asunto</span><input data-msj="${i}" data-campo="asunto" value="${esc(m.asunto || "")}"></label>` : ""}
         <textarea data-msj="${i}" data-campo="texto" aria-label="Mensaje para ${esc(m.nombre)}">${esc(m.texto)}</textarea>
@@ -1369,10 +1433,26 @@ function pintarBanner() {
   $("#banner").innerHTML = S.ejemplo ? `<div class="banner-ejemplo"><span>Estás viendo <b>datos de ejemplo</b> (clientes, notas y 3 documentos) para que pruebes todo. Se guardan como tuyos apenas cambies algo.</span>
     <button class="btn chico" data-action="vaciar">Empezar vacío</button></div>` : "";
 }
+function pintarClave() {
+  const el = $("#panel-clave"); if (!el) return;
+  el.hidden = !UI.verClave;
+  if (!UI.verClave) return;
+  const hay = IA.modo === "api";
+  el.innerHTML = `<div class="panel"><h3>Clave de API de Claude</h3>
+    <p class="small muted">Para usar la IA fuera de claude.ai necesitas una clave de API (se crea en console.anthropic.com → API Keys).
+    Se guarda <b>solo en este navegador</b> y se envía únicamente a la API de Anthropic. No uses este archivo en un computador compartido.
+    Costo aproximado: $20–60 CLP por foto y unos pocos pesos por mensaje.</p>
+    <div class="fila"><label class="campo crece"><span>Clave</span><input type="password" id="clave-api" autocomplete="off" placeholder="sk-ant-…" value=""></label>
+      <button class="btn primario" data-action="clave-guardar" style="align-self:end">Guardar</button>
+      ${hay ? '<button class="btn" data-action="clave-borrar" style="align-self:end">Quitar clave</button>' : ""}</div>
+    ${hay ? '<div class="aviso ok">La IA está conectada con tu clave.</div>' : ""}</div>`;
+}
 function pintarEstado() {
   const ia = $("#estado-ia"), d = $("#estado-datos"), e = estadoIA();
   ia.className = "pill " + (e === "ok" ? "ok" : "warn");
-  ia.textContent = e === "ok" ? "IA: tu cuenta de Claude" : e === "texto" ? "IA: solo texto en esta vista" : "IA: no disponible aquí";
+  ia.textContent = IA.modo === "api" ? "IA: tu clave de API" : e === "ok" ? "IA: tu cuenta de Claude" : e === "texto" ? "IA: solo texto en esta vista" : "IA: sin conectar";
+  const bc = $("#btn-clave"); if (bc) bc.hidden = IA.modo === "claude";
+  pintarClave();
   d.className = "pill " + (Store.modo === "db" ? "ok" : "");
   d.textContent = Store.modo === "db" ? "Datos: guardados en tu cuenta" : Store.modo === "local" ? "Datos: en este navegador" : "Datos: sin guardar";
 }
@@ -1436,6 +1516,14 @@ document.addEventListener("click", async (ev) => {
       UI.mapeo = null; Store.guardar("contactos"); pintarMapeo(); pintarContactos(); return toast(`${nuevos.length} contactos importados`);
     }
     case "generar": return generarMensajes();
+    case "clave": UI.verClave = !UI.verClave; pintarClave(); if (UI.verClave) $("#clave-api")?.focus(); return;
+    case "clave-guardar": {
+      const v = $("#clave-api").value.trim();
+      if (!v.startsWith("sk-ant-")) { toast("La clave debe empezar con sk-ant-"); return; }
+      try { localStorage.setItem(CLAVE_LS, v); } catch { IA.claveMemoria = v; toast("No se pudo guardar en el navegador: se usará solo mientras la página esté abierta"); }
+      activarClave(v); UI.verClave = false; pintarEstado(); return toast("Clave guardada. La IA está conectada.");
+    }
+    case "clave-borrar": try { localStorage.removeItem(CLAVE_LS); } catch { /* nada */ } IA.claveMemoria = ""; IA.sample = null; IA.imagenes = false; IA.modo = "no"; pintarEstado(); return toast("Clave quitada");
     case "copiar-uno": { const R = UI.resultado, m = R.mensajes[+t.dataset.i]; return copiar(R.canal === "correo" && m.asunto ? `Asunto: ${m.asunto}\n\n${m.texto}` : m.texto, $(`textarea[data-msj="${t.dataset.i}"]`)); }
     case "copiar-todos": { const R = UI.resultado; return copiar(R.mensajes.map((m) => textoMensaje(m, R.canal)).join("\n\n———\n\n")); }
     case "lote-copiar": { const l = S.lotes.find((x) => x.id === t.dataset.id); return l && copiar(l.mensajes.map((m) => textoMensaje(m, l.canal)).join("\n\n———\n\n")); }
